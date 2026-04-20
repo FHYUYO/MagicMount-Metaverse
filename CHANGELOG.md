@@ -1,207 +1,127 @@
-# Magic Mount Metaverse v2.3 修复日志
+# Magic Mount Metaverse v3.0
 
-## 版本信息
-- **版本号**: v2.3
-- **修复日期**: 2026年
-- **修复内容**: 挂载模式冲突修复
+## 简介
 
----
+Magic Mount Metaverse 是一个增强型 Magisk/KernelSU/APatch 元模块，集成了 Magic Mount 和 OverlayFS 挂载功能。
 
-## 🔧 主要修复
+## 主要特性
 
-### 1. 挂载模式冲突 (核心问题)
+### v3.0 新增功能
+- **模块识别面板**: 在 WebUI 中直接查看和管理所有已安装模块
+- **独立挂载模式**: 每个模块可单独设置 Magic 或 OverlayFS 挂载模式
+- **KernelSU 兼容优化**: 修复了关闭"默认卸载模块"后无法开机的 bug
+- **移除 Ignore 模式**: 简化配置，仅保留 Magic 和 OverlayFS 两种挂载模式
 
-#### 问题描述
-- WebUI可以正常保存模块的挂载模式到 `module_mount_modes` (JSON格式)
-- `metamount.sh` 的 `read_config()` 函数只读取了全局 `mount_mode`
-- 完全忽略了 `module_mount_modes` 配置，导致所有模块都使用全局模式
+### 核心功能
+- **双挂载模式**: 支持 Magic 单目录挂载和 OverlayFS 双目录隔离挂载
+- **隐身模式**: 隐藏模块存在痕迹，防止检测
+- **性能优化**: 三级优化级别可选（禁用/快速/极致）
+- **模块管理**: 支持跳过特定模块的挂载
 
-#### 解决方案
-- 新增 `get_module_mount_mode()` 函数，从JSON中解析模块级挂载模式
-- 修改主程序逻辑，根据 `optimization_level` 选择不同策略
-- **Ultra模式(优化级别2)**: 遍历所有模块，为每个模块应用对应的挂载模式
-- 优先使用模块单独设置，模块无设置则使用全局模式
+## 支持环境
 
-### 2. Bug修复
+- KernelSU
+- APatch
 
-#### metamount.sh
-- **第59行**: `log_msg "Binary not found: mm_binary"` → 修正为 `$MM_BINARY`
-- **增强配置解析**: 使用更健壮的正则表达式提取配置值
-- **变量初始化**: 确保所有变量都有默认值
-- **错误处理**: 添加了重试机制 (最多2次重试)
+## 安装
 
-#### status_updater.sh
-- **增强JSON解析**: 使用更健壮的方式从JSON提取模块模式
-- **状态检测**: 增加了对 `/data/adb/modules_rw` 和 `/data/adb/.modules_rw` 的检查
-- **备份更新方法**: 添加了 `update_prop_backup()` 防止并发更新失败
+1. 在 Magisk Manager/KernelSU Manager 中刷入 zip 包
+2. 重启设备
+3. 在模块管理界面点击 Magic Mount 进入配置界面
 
-#### 所有Shell脚本
-- 统一变量命名和日志格式
-- 添加更完善的错误处理
-- 确保权限设置正确
+## 目录结构
 
----
-
-## 📈 稳定性优化
-
-### 错误重试机制
-```shell
-local retry_count=0
-local max_retries=2
-while [ $retry_count -le $max_retries ]; do
-    execute_mount "$MODULE_NAME" "$USE_MODE"
-    if [ $? -eq 0 ]; then
-        return 0
-    fi
-    retry_count=$((retry_count + 1))
-    sleep 1
-done
+```
+MagicMount-Metaverse-v3.0/
+├── bin/                      # 二进制文件
+│   ├── mm_arm64            # ARM64 Magic 挂载
+│   ├── mm_amd64            # x86_64 Magic 挂载
+│   ├── mm_armv7            # ARMv7 Magic 挂载
+│   ├── mm_overlay_arm64    # ARM64 OverlayFS 挂载
+│   └── mm_overlay_amd64    # x86_64 OverlayFS 挂载
+├── webroot/                 # WebUI 资源
+│   ├── index.html
+│   └── assets/
+├── module.prop
+├── metamount.sh            # 挂载脚本
+├── metainstall.sh          # 安装脚本
+├── metauninstall.sh        # 卸载脚本
+├── service.sh              # 后台服务
+├── post-mount.sh           # 挂载后脚本
+├── customize.sh            # 自定义安装脚本
+├── mm.conf                 # 主配置文件
+├── mm_extended.conf        # 扩展配置文件
+└── checksums               # 校验文件
 ```
 
-### 挂载延迟机制
-- 支持配置 `mount_delay` (毫秒)
-- 根据优化级别自动调整等待时间
+## 配置文件
 
-### 日志管理
-- 自动限制日志大小 (保留最后100行)
-- 深度脱敏处理
+### mm.conf
+主配置文件，包含核心设置：
+- `module_dir`: 模块目录路径
+- `mount_source`: 挂载源 (KSU/APatch)
+- `log_file`: 日志文件路径
+- `debug`: 调试模式
+- `umount`: 启用卸载
 
----
+### mm_extended.conf
+扩展配置文件，包含：
+- **隐身设置**: stealth_mode, randomize_id, hide_mount_logs
+- **性能设置**: optimization_level, mount_delay, parallel_mount
+- **挂载模式**: mount_mode, module_mount_modes
 
-## 🔒 隐藏性能增强
+## 挂载模式
 
-### 日志过滤增强
-过滤关键词:
-- password, secret, token, credential, auth
-- unmount, mounting (根据 hide_mount_logs 设置)
+### Magic 模式
+- 单目录挂载
+- 兼容性更好
+- 资源占用低
 
-### 路径脱敏
-```
-/data/adb/modules → <MODULES>
-/data/adb/magic_mount → <MM_DIR>
-/system/system → <SYSTEM>
-/product/system → <PRODUCT>
-/vendor/system → <VENDOR>
-```
+### OverlayFS 模式
+- 双目录隔离（元数据 + 内容）
+- 更好的隔离性
+- 适用于复杂模块交互
 
-### 敏感信息保护
-- 配置值过滤
-- 模块路径隐藏
-- 操作日志隐藏
+## 性能优化级别
 
----
-
-## 🎯 性能优化
-
-### 优化级别 (optimization_level)
-
-| 级别 | 名称 | 行为 |
-|------|------|------|
-| 0 | Standard | 使用全局模式，标准等待时间 |
-| 1 | Fast | 减少等待时间，使用全局模式 |
-| 2 | Ultra | 完整模块级模式支持，最大性能 |
-
-### 模块级挂载模式
-
-| 模式 | 说明 |
+| 级别 | 说明 |
 |------|------|
-| magic | 使用 mmd 单目录挂载 |
-| overlayfs | 使用 mm_overlay 双目录挂载 |
-| ignore | 跳过该模块的挂载 |
-| global | 使用全局设置 |
+| 0 (禁用) | 标准模式，使用全局挂载设置 |
+| 1 (快速) | 减少等待时间，使用全局模式 |
+| 2 (极致) | 模块级挂载模式，最大性能 |
 
----
+## 常见问题
 
-## 📋 配置文件
+### Q: 关闭"默认卸载模块"后无法开机
+A: v3.0 已修复此问题。模块现在会检测 KernelSU 的卸载状态标志，自动跳过已卸载的模块。
 
-### mm_extended.conf 新增字段
-```conf
-# Per-module mount modes (JSON format)
-module_mount_modes={}
-# 格式: {"module_id": "overlayfs", "another_module": "magic"}
-```
+### Q: 如何为单个模块设置挂载模式？
+A: 在模块列表页面点击模块卡片展开详情，选择所需的挂载模式（Magic 或 OverlayFS）。
 
-### WebUI支持
-- 模块列表页显示每个模块的挂载模式
-- 可单独设置每个模块的挂载模式
-- 设置后自动保存到 `module_mount_modes`
+### Q: ignore 模式去哪了？
+A: v3.0 已移除 ignore 模式。如需跳过某模块挂载，请使用模块目录下的 `skip_mount` 文件。
 
----
+## 更新日志
 
-## 🧪 测试验证
+### v3.0 (2024)
+- 添加模块识别面板
+- 移除 ignore 挂载模式
+- 修复 KernelSU 卸载后的开机问题
 
-### 兼容性
-- ✅ KernelSU 兼容
-- ✅ APatch 兼容
-- ✅ ARM64, ARMv7, x86_64 架构
+### v2.3
+- 基础元模块架构
+- 双挂载模式支持
+- 隐身模式支持
 
-### 功能验证
-- [x] 全局挂载模式正常工作
-- [x] 模块级挂载模式正常工作
-- [x] ignore 模式跳过指定模块
-- [x] 配置文件读写正常
-- [x] 日志功能正常
-- [x] 隐身模式正常工作
+## 作者
 
----
+- GitHub: [@FHYUYO](https://github.com/FHYUYO)
+- 酷安: [@枫原羽悠](https://www.coolapk.com)
 
-## 📁 修改文件列表
 
-| 文件 | 修改类型 | 说明 |
-|------|----------|------|
-| metamount.sh | 核心修复 | 增加模块级挂载模式支持 |
-| status_updater.sh | 功能增强 | 改进JSON解析和状态检测 |
-| metainstall.sh | Bug修复 | 完善错误处理 |
-| metauninstall.sh | 稳定性优化 | 改进卸载逻辑 |
-| service.sh | 性能优化 | 根据优化级别调整等待 |
-| post-mount.sh | 性能优化 | 减少不必要的等待 |
-| customize.sh | 完善 | 增强安装流程 |
-| uninstall.sh | 完善 | 改进卸载界面 |
-| mm_extended.conf | 文档完善 | 增强注释说明 |
 
----
+## 致谢
 
-## 使用方法
-
-### 1. WebUI设置模块挂载模式
-1. 打开 Magic Mount WebUI
-2. 进入 "Modules" 标签页
-3. 为每个模块选择挂载模式 (Magic/Overlay/Ignore)
-4. 设置自动保存
-
-### 2. 手动编辑配置
-```json
-{
-  "SomeModule": "overlayfs",
-  "AnotherModule": "magic",
-  "BatteryModule": "ignore"
-}
-```
-
-### 3. 命令行设置
-```bash
-# 编辑配置文件
-vim /data/adb/magic_mount/mm_extended.conf
-
-# 设置全局模式为 overlayfs
-mount_mode=overlayfs
-
-# 设置优化级别为 Ultra
-optimization_level=2
-```
-
----
-
-## ⚠️ 注意事项
-
-1. **重置后生效**: 修改配置文件后需要重启才能生效
-2. **模块名匹配**: JSON中的模块ID必须与 /data/adb/modules/ 下的目录名完全匹配
-3. **二进制支持**: Ultra模式需要新版 mmd 支持模块级挂载参数
-4. **ARMv7限制**: ARMv7架构不支持 OverlayFS 模式
-
----
-
-## 📞 支持
-
-- GitHub: https://github.com/FHYUYO/MagicMount-Metaverse
-- 酷安: @枫原羽悠
+- [KernelSU](https://github.com/tiann/KernelSU)
+- [APatch](https://github.com/bmax121/APatch)
+- [Magisk](https://github.com/topjohnwu/Magisk)
