@@ -1,146 +1,127 @@
-# Magic Mount Metaverse v2.3
+# Magic Mount Metaverse v3.0
 
 ## 简介
 
-Magic Mount Metaverse 是一个用于 KernelSU/APatch 的元模块，用于挂载其他模块到系统分区。它支持 Magic 模式和 OverlayFS 模式，并且可以在 WebUI 中为每个模块单独设置挂载模式。
+Magic Mount Metaverse 是一个增强型 Magisk/KernelSU/APatch 元模块，集成了 Magic Mount 和 OverlayFS 挂载功能。
 
-## 主要功能
+## 主要特性
 
-### 1. 核心挂载功能
-- **Magic 模式**: 使用单目录挂载，简单高效
-- **OverlayFS 模式**: 使用双目录挂载（元数据+内容分离），性能更好
-- **模块级挂载**: 可以为每个模块单独设置挂载模式
+### v3.0 新增功能
+- **模块识别面板**: 在 WebUI 中直接查看和管理所有已安装模块
+- **独立挂载模式**: 每个模块可单独设置 Magic 或 OverlayFS 挂载模式
+- **KernelSU 兼容优化**: 修复了关闭"默认卸载模块"后无法开机的 bug
+- **移除 Ignore 模式**: 简化配置，仅保留 Magic 和 OverlayFS 两种挂载模式
 
-### 2. WebUI 控制面板
-- 实时监控挂载状态
-- 模块管理（启用/禁用/跳过）
-- 挂载模式设置
-- 日志查看
-- 隐身设置
+### 核心功能
+- **双挂载模式**: 支持 Magic 单目录挂载和 OverlayFS 双目录隔离挂载
+- **隐身模式**: 隐藏模块存在痕迹，防止检测
+- **性能优化**: 三级优化级别可选（禁用/快速/极致）
+- **模块管理**: 支持跳过特定模块的挂载
 
-### 3. 优化选项
-- **Standard 模式**: 标准行为
-- **Fast 模式**: 减少等待时间
-- **Ultra 模式**: 完整模块级挂载支持
+## 支持环境
+
+- KernelSU
+- APatch
 
 ## 安装
 
-1. 下载模块 zip 包
-2. 通过 KernelSU Manager 或 APatch Manager 安装
-3. 重启设备
+1. 在 Magisk Manager/KernelSU Manager 中刷入 zip 包
+2. 重启设备
+3. 在模块管理界面点击 Magic Mount 进入配置界面
 
-## 配置
-
-### 配置文件位置
-- 主配置: `/data/adb/magic_mount/mm.conf`
-- 扩展配置: `/data/adb/magic_mount/mm_extended.conf`
-
-### 全局挂载模式
-```conf
-mount_mode=magic  # 或 overlayfs
-```
-
-### 模块级挂载模式 (JSON格式)
-```conf
-module_mount_modes={"ModuleName":"overlayfs","AnotherModule":"magic"}
-```
-
-支持的模式:
-- `magic`: 使用 Magic 挂载
-- `overlayfs`: 使用 OverlayFS 挂载
-- `ignore`: 跳过该模块
-
-### 优化级别
-```conf
-optimization_level=0  # 标准
-optimization_level=1  # 快速
-optimization_level=2  # 极致 (推荐)
-```
-
-## 使用示例
-
-### 通过 WebUI 设置
-
-1. 打开 Magic Mount WebUI
-2. 进入 "Modules" 标签页
-3. 为每个模块选择挂载模式
-4. 设置会自动保存
-
-### 手动编辑配置
-
-```bash
-# 编辑配置
-vi /data/adb/magic_mount/mm_extended.conf
-
-# 设置示例
-mount_mode=magic
-optimization_level=2
-module_mount_modes={
-  "Riru":"overlayfs",
-  "LSPosed":"magic",
-  "SomeModule":"ignore"
-}
-```
-
-## 更新日志 v2.3
-
-### 核心修复
-- ✅ 修复挂载模式冲突问题
-- ✅ 实现完整的模块级挂载模式支持
-- ✅ 修复配置读取逻辑
-
-### 稳定性优化
-- ✅ 增加错误重试机制
-- ✅ 优化挂载算法
-- ✅ 改进日志管理
-
-### 隐藏性能
-- ✅ 增强日志过滤
-- ✅ 敏感信息脱敏
-- ✅ 路径信息隐藏
-
-## 兼容性
-
-- ✅ KernelSU
-- ✅ APatch
-- ✅ ARM64
-- ✅ ARMv7 (Magic模式)
-- ✅ x86_64
-
-## 文件结构
+## 目录结构
 
 ```
-MagicMount-Metaverse/
-├── bin/
-│   ├── mm_arm64          # Magic 模式二进制 (ARM64)
-│   ├── mm_armv7          # Magic 模式二进制 (ARMv7)
-│   ├── mm_amd64          # Magic 模式二进制 (x86_64)
-│   ├── mm_overlay_arm64  # OverlayFS 二进制 (ARM64)
-│   └── mm_overlay_amd64  # OverlayFS 二进制 (x86_64)
-├── webroot/              # WebUI 文件
-├── metamount.sh          # 挂载脚本
-├── status_updater.sh     # 状态更新脚本
-├── service.sh            # 后台服务
-├── mm.conf               # 主配置文件
-├── mm_extended.conf      # 扩展配置文件
-└── customize.sh          # 安装脚本
+MagicMount-Metaverse-v3.0/
+├── bin/                      # 二进制文件
+│   ├── mm_arm64            # ARM64 Magic 挂载
+│   ├── mm_amd64            # x86_64 Magic 挂载
+│   ├── mm_armv7            # ARMv7 Magic 挂载
+│   ├── mm_overlay_arm64    # ARM64 OverlayFS 挂载
+│   └── mm_overlay_amd64    # x86_64 OverlayFS 挂载
+├── webroot/                 # WebUI 资源
+│   ├── index.html
+│   └── assets/
+├── module.prop
+├── metamount.sh            # 挂载脚本
+├── metainstall.sh          # 安装脚本
+├── metauninstall.sh        # 卸载脚本
+├── service.sh              # 后台服务
+├── post-mount.sh           # 挂载后脚本
+├── customize.sh            # 自定义安装脚本
+├── mm.conf                 # 主配置文件
+├── mm_extended.conf        # 扩展配置文件
+└── checksums               # 校验文件
 ```
+
+## 配置文件
+
+### mm.conf
+主配置文件，包含核心设置：
+- `module_dir`: 模块目录路径
+- `mount_source`: 挂载源 (KSU/APatch)
+- `log_file`: 日志文件路径
+- `debug`: 调试模式
+- `umount`: 启用卸载
+
+### mm_extended.conf
+扩展配置文件，包含：
+- **隐身设置**: stealth_mode, randomize_id, hide_mount_logs
+- **性能设置**: optimization_level, mount_delay, parallel_mount
+- **挂载模式**: mount_mode, module_mount_modes
+
+## 挂载模式
+
+### Magic 模式
+- 单目录挂载
+- 兼容性更好
+- 资源占用低
+
+### OverlayFS 模式
+- 双目录隔离（元数据 + 内容）
+- 更好的隔离性
+- 适用于复杂模块交互
+
+## 性能优化级别
+
+| 级别 | 说明 |
+|------|------|
+| 0 (禁用) | 标准模式，使用全局挂载设置 |
+| 1 (快速) | 减少等待时间，使用全局模式 |
+| 2 (极致) | 模块级挂载模式，最大性能 |
 
 ## 常见问题
 
-### Q: 模块没有使用我设置的挂载模式
-A: 确保 `optimization_level=2`，并且模块名与目录名完全匹配。
+### Q: 关闭"默认卸载模块"后无法开机
+A: v3.0 已修复此问题。模块现在会检测 KernelSU 的卸载状态标志，自动跳过已卸载的模块。
 
-### Q: ARMv7 无法使用 OverlayFS
-A: 这是设计如此，ARMv7 架构只支持 Magic 模式。
+### Q: 如何为单个模块设置挂载模式？
+A: 在模块列表页面点击模块卡片展开详情，选择所需的挂载模式（Magic 或 OverlayFS）。
 
-### Q: 如何查看日志
-A: 在 WebUI 中进入 "Logs" 标签页，或查看 `/data/adb/magic_mount/mm.log`
+### Q: ignore 模式去哪了？
+A: v3.0 已移除 ignore 模式。如需跳过某模块挂载，请使用模块目录下的 `skip_mount` 文件。
 
-### Q: 恢复默认设置
-A: 删除 `/data/adb/magic_mount/` 目录后重新安装模块。
+## 更新日志
 
-## 开发者信息
+### v3.0 (2024)
+- 添加模块识别面板
+- 移除 ignore 挂载模式
+- 修复 KernelSU 卸载后的开机问题
 
-- GitHub: https://github.com/FHYUYO/MagicMount-Metaverse
-- 酷安: @枫原羽悠
+### v2.3
+- 基础元模块架构
+- 双挂载模式支持
+- 隐身模式支持
+
+## 作者
+
+- GitHub: [@FHYUYO](https://github.com/FHYUYO)
+- 酷安: [@枫原羽悠](https://www.coolapk.com)
+
+
+
+## 致谢
+
+- [KernelSU](https://github.com/tiann/KernelSU)
+- [APatch](https://github.com/bmax121/APatch)
+- [Magisk](https://github.com/topjohnwu/Magisk)
