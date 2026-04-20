@@ -1,7 +1,7 @@
 #!/system/bin/sh
 ############################################
 # Magic Mount Metaverse - service.sh
-# Background service v2.3
+# Background service v3.0
 # Author: GitHub@FHYUYO
 ############################################
 

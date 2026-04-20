@@ -1,8 +1,8 @@
 id=Magic-Mount-Metaverse
 metamodule=1
 name=Magic Mount Metaverse
-version=v2.3
-versionCode=74
+version=v3.0
+versionCode=300
 author=GitHub@FHYUYO/酷安@枫原羽悠
 description=Magic: 0 | Overlayfs: 0 | Ready
 updateJson=https://raw.githubusercontent.com/FHYUYO/MagicMount-Metaverse/main/update.json

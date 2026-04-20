@@ -1,7 +1,7 @@
 #!/system/bin/sh
 ############################################
 # Magic Mount Metaverse - post-mount.sh
-# Post-mount hook v2.3
+# Post-mount hook v3.0
 # Author: GitHub@FHYUYO
 ############################################
 

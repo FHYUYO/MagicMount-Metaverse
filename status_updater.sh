@@ -1,6 +1,6 @@
 #!/system/bin/sh
 ############################################
-# Dynamic Status Updater v2.3
+# Dynamic Status Updater v3.0
 # Updates module.prop description in KSU list
 # Fixed: Enhanced per-module mount mode parsing
 ############################################
@@ -46,7 +46,6 @@ get_module_mode() {
 count_modules() {
     local magic=0
     local overlayfs=0
-    local ignored=0
     
     read_global_config
     
@@ -68,12 +67,6 @@ count_modules() {
         # 获取模块挂载模式
         local mode=$(get_module_mode "$name")
         
-        # 忽略的模块
-        if [ "$mode" = "ignore" ]; then
-            ignored=$((ignored + 1))
-            continue
-        fi
-        
         # 使用模块模式或全局模式
         if [ "$mode" = "global" ]; then
             mode="$GLOBAL_MODE"
@@ -89,7 +82,7 @@ count_modules() {
         esac
     done
     
-    echo "$magic|$overlayfs|$ignored"
+    echo "$magic|$overlayfs"
 }
 
 # 获取状态
@@ -161,13 +154,12 @@ update_prop() {
     local stats=$(count_modules)
     local magic=$(echo "$stats" | cut -d'|' -f1)
     local overlayfs=$(echo "$stats" | cut -d'|' -f2)
-    local ignored=$(echo "$stats" | cut -d'|' -f3)
     
     # 构建描述
     local desc=""
     
     # 根据模块数量决定显示格式
-    local total=$((magic + overlayfs + ignored))
+    local total=$((magic + overlayfs))
     
     if [ "$total" -eq 0 ]; then
         desc="Magic: 0 | Overlayfs: 0 | Ready"
@@ -210,8 +202,7 @@ update_prop_backup() {
     local stats=$(count_modules)
     local magic=$(echo "$stats" | cut -d'|' -f1)
     local overlayfs=$(echo "$stats" | cut -d'|' -f2)
-    local ignored=$(echo "$stats" | cut -d'|' -f3)
-    local total=$((magic + overlayfs + ignored))
+    local total=$((magic + overlayfs))
     
     local desc=""
     if [ "$total" -eq 0 ]; then

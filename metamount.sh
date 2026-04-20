@@ -1,16 +1,17 @@
 #!/system/bin/sh
 ############################################
 # Magic Mount Metaverse - metamount.sh
-# Enhanced mount script v2.3
+# Enhanced mount script v3.0
 # Author: GitHub@FHYUYO/酷安@枫原羽悠
-# Fixed: Per-module mount mode support
+# Fixed: Per-module mount mode, removed ignore mode
+# Fixed: Boot issue with KernelSU uninstall detection
 ############################################
 
 MODDIR="${0%/*}"
 EXTENDED_CONFIG="/data/adb/magic_mount/mm_extended.conf"
 LOG_FILE="/data/adb/magic_mount/mm.log"
 
-# 二进制文件
+# 二进制文件路径
 MM_BINARY="$MODDIR/mmd"
 OVERLAY_BINARY="$MODDIR/mm_overlay"
 STATUS_UPDATER="$MODDIR/status_updater.sh"
@@ -22,30 +23,14 @@ STEALTH_MODE="false"
 PARALLEL_MOUNT="false"
 OPTIMIZATION_LEVEL="0"
 MOUNT_DELAY="0"
+MODULE_MODES_JSON="{}"
 
-# 关联数组支持
-if [ -z "$BASH_VERSION" ]; then
-    # 为ash/sh准备替代方案
-    get_module_mode() {
-        local module_name="$1"
-        local module_modes="$2"
-        # 使用grep提取JSON中的模块模式
-        echo "$module_modes" | grep -o "\"$module_name\":\"[^\"]*\"" 2>/dev/null | cut -d':' -f2 | tr -d '"'
-    }
-else
-    declare -A MODULE_MODE_MAP
-    get_module_mode() {
-        local module_name="$1"
-        echo "${MODULE_MODE_MAP[$module_name]}"
-    }
-fi
-
-# 日志函数（增强过滤）
+# 日志函数
 log_msg() {
     local msg="$1"
     local level="${2:-INFO}"
     
-    # 过滤敏感关键词（增强版）
+    # 过滤敏感关键词
     case "$msg" in
         *password*|*secret*|*key*|*token*|*credential*|*auth*)
             return
@@ -58,19 +43,16 @@ log_msg() {
             ;;
     esac
     
-    # 脱敏敏感路径
+    # 脱敏路径
     msg=$(echo "$msg" | sed \
         -e 's|/data/adb/modules|<MODULES>|g' \
         -e 's|/data/adb/magic_mount|<MM_DIR>|g' \
-        -e 's|/system/system|<SYSTEM>|g' \
-        -e 's|/product/system|<PRODUCT>|g' \
-        -e 's|/vendor/system|<VENDOR>|g' \
-        -e 's|/system_ext/system|<EXT>|g')
+        -e 's|/system/system|<SYSTEM>|g')
     
     echo "[$level] $msg" >> "$LOG_FILE" 2>/dev/null
 }
 
-# 读取配置（增强版）
+# 读取配置
 read_config() {
     GLOBAL_MOUNT_MODE="magic"
     HIDE_MOUNTS="false"
@@ -81,7 +63,6 @@ read_config() {
     MODULE_MODES_JSON="{}"
     
     if [ -f "$EXTENDED_CONFIG" ]; then
-        # 使用更健壮的配置读取
         GLOBAL_MOUNT_MODE=$(grep -E "^[[:space:]]*mount_mode[[:space:]]*=" "$EXTENDED_CONFIG" 2>/dev/null | head -1 | sed 's/.*=[[:space:]]*//' | tr -d ' "\r\n')
         HIDE_MOUNTS=$(grep -E "^[[:space:]]*hide_mount_logs[[:space:]]*=" "$EXTENDED_CONFIG" 2>/dev/null | head -1 | sed 's/.*=[[:space:]]*//' | tr -d ' "\r\n')
         STEALTH_MODE=$(grep -E "^[[:space:]]*stealth_mode[[:space:]]*=" "$EXTENDED_CONFIG" 2>/dev/null | head -1 | sed 's/.*=[[:space:]]*//' | tr -d ' "\r\n')
@@ -103,26 +84,12 @@ read_config() {
     log_msg "Config loaded: mode=$GLOBAL_MOUNT_MODE stealth=$STEALTH_MODE" "DEBUG"
 }
 
-# 解析模块挂载模式（修复版）
-parse_module_modes() {
-    local module_modes_json="$1"
-    
-    # 提取JSON中的键值对
-    echo "$module_modes_json" | sed 's/[{}"]//g' | tr ',' '\n' | while IFS=: read -r key value; do
-        key=$(echo "$key" | tr -d ' "')
-        value=$(echo "$value" | tr -d ' "')
-        if [ -n "$key" ] && [ -n "$value" ]; then
-            echo "$key:$value"
-        fi
-    done
-}
-
 # 获取模块的挂载模式
 get_module_mount_mode() {
     local module_name="$1"
     local module_modes_json="$2"
     
-    # 尝试从JSON中提取该模块的模式
+    # 从JSON中提取该模块的模式
     local mode=$(echo "$module_modes_json" | grep -o "\"$module_name\":\"[^\"]*\"" 2>/dev/null | head -1)
     if [ -n "$mode" ]; then
         echo "$mode" | sed 's/.*":"//' | tr -d '"'
@@ -131,14 +98,7 @@ get_module_mount_mode() {
     fi
 }
 
-# 设置环境变量
-setup_env() {
-    export MODULE_METADATA_DIR="/data/adb/modules"
-    export MM_STEALTH_MODE="$STEALTH_MODE"
-    export MM_HIDE_LOGS="$HIDE_MOUNTS"
-}
-
-# 延迟执行（用于性能优化）
+# 延迟执行
 apply_mount_delay() {
     if [ -n "$MOUNT_DELAY" ] && [ "$MOUNT_DELAY" -gt 0 ] 2>/dev/null; then
         local delay_sec=$(echo "scale=2; $MOUNT_DELAY / 1000" | bc 2>/dev/null || echo "0")
@@ -146,7 +106,7 @@ apply_mount_delay() {
     fi
 }
 
-# Magic 挂载（优化版）
+# Magic 挂载
 do_magic_mount() {
     local module_name="$1"
     
@@ -157,7 +117,6 @@ do_magic_mount() {
         return 1
     fi
     
-    # 根据隐身模式选择输出
     if [ "$STEALTH_MODE" = "true" ]; then
         "$MM_BINARY" "$module_name" >/dev/null 2>&1
     else
@@ -166,7 +125,7 @@ do_magic_mount() {
     return $?
 }
 
-# OverlayFS 挂载（优化版）
+# OverlayFS 挂载
 do_overlayfs_mount() {
     local module_name="$1"
     
@@ -184,9 +143,7 @@ do_overlayfs_mount() {
     
     if [ -f "$img_file" ] && ! mountpoint -q "$mnt_dir" 2>/dev/null; then
         mkdir -p "$mnt_dir" 2>/dev/null
-        # 尝试设置SELinux上下文
         chcon u:object_r:ksu_file:s0 "$img_file" 2>/dev/null
-        # 尝试挂载
         mount -t ext4 -o loop,rw,noatime "$img_file" "$mnt_dir" 2>/dev/null
         if mountpoint -q "$mnt_dir" 2>/dev/null; then
             export MODULE_CONTENT_DIR="$mnt_dir"
@@ -194,7 +151,6 @@ do_overlayfs_mount() {
         fi
     fi
     
-    # 根据隐身模式选择输出
     if [ "$STEALTH_MODE" = "true" ]; then
         "$OVERLAY_BINARY" "$module_name" >/dev/null 2>&1
     else
@@ -203,7 +159,7 @@ do_overlayfs_mount() {
     return $?
 }
 
-# 执行挂载（根据模式选择）
+# 执行挂载
 execute_mount() {
     local module_name="$1"
     local mount_mode="$2"
@@ -235,31 +191,29 @@ execute_mount() {
     return 1
 }
 
-# 清理日志（增强版）
-sanitize_logs() {
-    if [ ! -f "$LOG_FILE" ]; then
-        return
+# 检查模块是否被KernelSU卸载
+is_module_disabled_by_ksu() {
+    local module_name="$1"
+    local module_path="/data/adb/modules/$module_name"
+    
+    # 检查disable文件（KernelSU卸载标志）
+    if [ -f "$module_path/disable" ] || [ -f "$module_path/remove" ]; then
+        return 0  # 已卸载
     fi
     
-    # 创建临时文件
-    local tmp_file="${LOG_FILE}.sanitized"
+    return 1  # 未卸载
+}
+
+# 检查模块是否有skip_mount标记
+has_skip_mount() {
+    local module_name="$1"
+    local module_path="/data/adb/modules/$module_name"
     
-    # 深度脱敏处理
-    sed -i \
-        -e '/password/d' \
-        -e '/secret/d' \
-        -e '/token/d' \
-        -e '/key=/d' \
-        -e '/credential/d' \
-        -e '/unmount=/d' \
-        -e 's/mounting.*module:[^ ]*/Mount operation/g' \
-        -e 's|/data/adb/modules|<MODULES>|g' \
-        -e 's|/data/adb/magic_mount|<MM>|g' \
-        -e 's|/system/system|<SYS>|g' \
-        -e 's|/product/system|<PRD>|g' \
-        -e 's|/vendor/system|<VND>|g' \
-        "$LOG_FILE" 2>/dev/null
-    # 日志行数限制已移除，无限制记录日志
+    if [ -f "$module_path/skip_mount" ]; then
+        return 0  # 跳过挂载
+    fi
+    
+    return 1  # 正常挂载
 }
 
 # 更新状态显示
@@ -269,7 +223,7 @@ update_status() {
     fi
 }
 
-# 全局挂载模式（兼容旧版mmd）
+# 全局挂载
 do_global_mount() {
     log_msg "Using global mount mode: $GLOBAL_MOUNT_MODE" "INFO"
     
@@ -278,7 +232,6 @@ do_global_mount() {
         return 1
     fi
     
-    # 根据隐身模式选择输出
     if [ "$STEALTH_MODE" = "true" ]; then
         "$MM_BINARY" >/dev/null 2>&1
     else
@@ -287,7 +240,7 @@ do_global_mount() {
     return $?
 }
 
-# 全局OverlayFS挂载（兼容旧版mm_overlay）
+# 全局OverlayFS挂载
 do_global_overlayfs_mount() {
     log_msg "Using global OverlayFS mode" "INFO"
     
@@ -296,7 +249,6 @@ do_global_overlayfs_mount() {
         return 1
     fi
     
-    # 挂载 modules.img
     local img_file="$MODDIR/modules.img"
     local mnt_dir="$MODDIR/mnt"
     
@@ -319,10 +271,10 @@ do_global_overlayfs_mount() {
 # 主程序
 ############################################
 
-log_msg "=== Mount Started ===" "START"
+log_msg "=== Mount Started v3.0 ===" "START"
 
+# 读取配置
 read_config
-setup_env
 
 log_msg "Global Mode: $GLOBAL_MOUNT_MODE" "INFO"
 log_msg "Stealth: $STEALTH_MODE, Hide: $HIDE_MOUNTS" "DEBUG"
@@ -330,102 +282,94 @@ log_msg "Stealth: $STEALTH_MODE, Hide: $HIDE_MOUNTS" "DEBUG"
 # 应用挂载延迟
 apply_mount_delay
 
-# 根据优化级别选择策略
 EXIT_CODE=0
 
+# 根据优化级别选择策略
 case "$OPTIMIZATION_LEVEL" in
-    2) # Ultra模式 - 使用新版模块级挂载
+    2) # Ultra模式 - 使用模块级挂载
         log_msg "Ultra optimization mode" "DEBUG"
         
-        # 检查是否支持模块级挂载
-        if [ -f "$MM_BINARY" ] && "$MM_BINARY" --help 2>&1 | grep -q "module"; then
-            # 新版mmd支持模块级挂载
-            MODULE_DIR="/data/adb/modules"
-            SUCCESS_COUNT=0
-            FAIL_COUNT=0
-            
-            if [ -d "$MODULE_DIR" ]; then
-                for mod in "$MODULE_DIR"/*; do
-                    [ -d "$mod" ] || continue
-                    [ -d "$mod/system" ] || continue
-                    
-                    MODULE_NAME=$(basename "$mod")
-                    [ "$MODULE_NAME" = "Magic-Mount-Metaverse" ] && continue
-                    [ -e "$mod/disable" ] || [ -e "$mod/remove" ] && continue
-                    [ -e "$mod/skip_mount" ] && continue
-                    
-                    # 获取模块挂载模式
-                    MODULE_MODE=$(get_module_mount_mode "$MODULE_NAME" "$MODULE_MODES_JSON")
-                    
-                    # 忽略模式
-                    if [ "$MODULE_MODE" = "ignore" ]; then
-                        log_msg "Skipping: $MODULE_NAME (ignore mode)" "DEBUG"
-                        continue
-                    fi
-                    
-                    # 使用模块特定模式或全局模式
-                    if [ "$MODULE_MODE" != "global" ]; then
-                        USE_MODE="$MODULE_MODE"
-                    else
-                        USE_MODE="$GLOBAL_MOUNT_MODE"
-                    fi
-                    
-                    log_msg "Mounting: $MODULE_NAME with mode=$USE_MODE" "INFO"
-                    
-                    execute_mount "$MODULE_NAME" "$USE_MODE"
-                    if [ $? -eq 0 ]; then
-                        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-                    else
-                        FAIL_COUNT=$((FAIL_COUNT + 1))
-                    fi
-                done
+        MODULE_DIR="/data/adb/modules"
+        SUCCESS_COUNT=0
+        FAIL_COUNT=0
+        SKIP_COUNT=0
+        
+        if [ -d "$MODULE_DIR" ]; then
+            for mod in "$MODULE_DIR"/*; do
+                [ -d "$mod" ] || continue
+                [ -d "$mod/system" ] || continue
                 
-                log_msg "Mount summary: success=$SUCCESS_COUNT failed=$FAIL_COUNT" "INFO"
-            fi
-        else
-            # 旧版mmd，回退到全局模式
-            log_msg "Legacy mode, using global mount" "DEBUG"
-            do_global_mount
-            EXIT_CODE=$?
+                MODULE_NAME=$(basename "$mod")
+                
+                # 跳过自身模块
+                [ "$MODULE_NAME" = "Magic-Mount-Metaverse" ] && continue
+                
+                # 检查是否被KernelSU卸载
+                if is_module_disabled_by_ksu "$MODULE_NAME"; then
+                    log_msg "Skipping: $MODULE_NAME (disabled by KSU)" "DEBUG"
+                    SKIP_COUNT=$((SKIP_COUNT + 1))
+                    continue
+                fi
+                
+                # 检查skip_mount标记
+                if has_skip_mount "$MODULE_NAME"; then
+                    log_msg "Skipping: $MODULE_NAME (skip_mount)" "DEBUG"
+                    SKIP_COUNT=$((SKIP_COUNT + 1))
+                    continue
+                fi
+                
+                # 获取模块挂载模式
+                MODULE_MODE=$(get_module_mount_mode "$MODULE_NAME" "$MODULE_MODES_JSON")
+                
+                # 使用模块特定模式或全局模式（不再有ignore模式）
+                if [ "$MODULE_MODE" != "global" ]; then
+                    USE_MODE="$MODULE_MODE"
+                else
+                    USE_MODE="$GLOBAL_MOUNT_MODE"
+                fi
+                
+                log_msg "Mounting: $MODULE_NAME with mode=$USE_MODE" "INFO"
+                
+                execute_mount "$MODULE_NAME" "$USE_MODE"
+                if [ $? -eq 0 ]; then
+                    SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+                else
+                    FAIL_COUNT=$((FAIL_COUNT + 1))
+                fi
+            done
+            
+            log_msg "Mount summary: success=$SUCCESS_COUNT failed=$FAIL_COUNT skipped=$SKIP_COUNT" "INFO"
         fi
         ;;
     
-    1) # Fast模式 - 尝试模块级挂载，回退到全局
+    1) # Fast模式
         log_msg "Fast optimization mode" "DEBUG"
         
         if [ -f "$MM_BINARY" ]; then
             do_global_mount
             EXIT_CODE=$?
         else
+            log_msg "mmd binary not found" "ERROR"
             EXIT_CODE=1
         fi
         ;;
     
-    *) # 标准模式 - 使用全局模式
+    *) # 禁用模式（标准）
         log_msg "Standard mode" "DEBUG"
         
-        case "$GLOBAL_MOUNT_MODE" in
-            overlayfs)
-                do_global_overlayfs_mount
-                EXIT_CODE=$?
-                ;;
-            *)
-                do_global_mount
-                EXIT_CODE=$?
-                ;;
-        esac
+        if [ "$GLOBAL_MOUNT_MODE" = "overlayfs" ]; then
+            do_global_overlayfs_mount
+            EXIT_CODE=$?
+        else
+            do_global_mount
+            EXIT_CODE=$?
+        fi
         ;;
 esac
 
-if [ $EXIT_CODE -eq 0 ]; then
-    log_msg "Mount completed successfully" "SUCCESS"
-    sanitize_logs
-    /data/adb/ksud kernel notify-module-mounted 2>/dev/null
-    sleep 1
-    update_status
-else
-    log_msg "Mount failed with code: $EXIT_CODE" "ERROR"
-fi
+# 更新状态
+update_status
 
 log_msg "=== Mount Finished ===" "END"
+
 exit $EXIT_CODE

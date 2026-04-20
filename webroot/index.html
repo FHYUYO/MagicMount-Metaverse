@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-    <meta name="theme-color" content="#00838f">
+    <meta name="theme-color" content="#2DFFF5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Magic Mount</title>
@@ -75,7 +75,7 @@
                 <div class="status-card">
                     <div class="status-icon status-icon-modules">
                         <svg viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="currentColor" d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-2.06 11L14 17v-2h-4v-2h4V9l4.94 4.06z"/>
+                            <path fill="currentColor" d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/>
                         </svg>
                     </div>
                     <div class="status-info">
@@ -90,7 +90,7 @@
                 <div class="metric-card">
                     <div class="metric-header">
                         <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M9 2v4H7V2h2zm4 0v4h-2V2h2zm4 0v4h-2V2h2zM5 8v2H3V8h2zm12 0v2h-2V8h2zm4 0v2h-2V8h2zm-8 4v2H7v-2h2zm4 0v2h-2v-2h2zm4 0v2h-2v-2h2zM5 12v2H3v-2h2zm12 0v2h-2v-2h2zm-6 4v6h4v-6h-6v6zm-4-2v2H7v-2h2zm4 0v2h-2v-2h2zm4 0v2h-2v-2h2z"/>
+                            <path fill="currentColor" d="M9 2v4H7V2h2zm4 0v4h-2V2h2zm4 0v4h-2V2h2zM5 8v2H3V8h2zm12 0v2h-2V8h2zm4 0v2h-2V8h2zM5 12v2H3v-2h2zm12 0v2h-2v-2h2zm-6 4v2H7v-2h2zm4 0v2h-2v-2h2zm4 0v2h-2v-2h2zM5 16v2H3v-2h2zm12 0v2h-2v-2h2z"/>
                         </svg>
                         <span class="metric-title" data-i18n="metrics.cpu">CPU</span>
                     </div>
@@ -235,15 +235,15 @@
                     </div>
                 </div>
 
-                <!-- Stealth Tab -->
-                <div class="tab-panel" id="stealthPanel">
+                <!-- Settings Tab -->
+                <div class="tab-panel" id="settingsPanel">
                     <div class="md3-card">
-                        <h2 class="card-title" data-i18n="stealth.title">Stealth Settings</h2>
+                        <h2 class="card-title" data-i18n="settings.stealthSettings">Stealth Settings</h2>
                         
-                        <h3 class="section-title" data-i18n="stealth.general">General</h3>
+                        <h3 class="section-title" data-i18n="settings.general">General</h3>
                         
                         <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="stealth.enable">Enable Stealth Mode</span>
+                            <span class="toggle-label" data-i18n="settings.enable">Enable Stealth Mode</span>
                             <label class="switch">
                                 <input type="checkbox" id="stealthMode">
                                 <span class="slider"></span>
@@ -251,7 +251,7 @@
                         </div>
                         
                         <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="stealth.randomId">Randomize Module ID</span>
+                            <span class="toggle-label" data-i18n="settings.randomId">Randomize Module ID</span>
                             <label class="switch">
                                 <input type="checkbox" id="randomizeId">
                                 <span class="slider"></span>
@@ -259,7 +259,7 @@
                         </div>
                         
                         <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="stealth.hideLogs">Hide Mount Logs</span>
+                            <span class="toggle-label" data-i18n="settings.hideLogs">Hide Mount Logs</span>
                             <label class="switch">
                                 <input type="checkbox" id="hideMountLogs">
                                 <span class="slider"></span>
@@ -267,60 +267,48 @@
                         </div>
                         
                         <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="stealth.hideFromList">Hide from Module List</span>
+                            <span class="toggle-label" data-i18n="settings.hideFromList">Hide from Module List</span>
                             <label class="switch">
                                 <input type="checkbox" id="hideFromList">
                                 <span class="slider"></span>
                             </label>
                         </div>
                         
-                        <h3 class="section-title" data-i18n="stealth.mountMode">Mount Mode</h3>
+                        <h3 class="section-title" data-i18n="settings.mountMode">Mount Mode</h3>
                         
                         <div class="text-field">
                             <select id="globalMountMode">
-                                <option value="magic" data-i18n="stealth.magicMode">Magic</option>
-                                <option value="overlayfs" data-i18n="stealth.overlayfsMode">Overlayfs</option>
+                                <option value="magic" data-i18n="settings.magicMode">Magic</option>
+                                <option value="overlayfs" data-i18n="settings.overlayfsMode">OverlayFS</option>
                             </select>
-                            <label data-i18n="stealth.mountModeGlobal">Global Mount Mode</label>
+                            <label data-i18n="settings.mountModeGlobal">Global Mount Mode</label>
                         </div>
                         
                         <p class="mode-hint">
                             <svg viewBox="0 0 24 24" width="16" height="16">
                                 <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
                             </svg>
-                            <span>Standard: Single directory mount. OverlayFS: Dual directory (metadata + content) for better performance.</span>
+                            <span>Magic: Standard single directory mount. OverlayFS: Dual directory for better isolation.</span>
                         </p>
                         
-                        <h3 class="section-title" data-i18n="stealth.advanced">Advanced</h3>
-                        
-                        <div class="text-field">
-                            <input type="text" id="alternatePath" placeholder=" ">
-                            <label data-i18n="stealth.altPath">Alternate Module Path</label>
-                        </div>
-                        
-                        <div class="text-field">
-                            <input type="text" id="spoofName" placeholder=" ">
-                            <label data-i18n="stealth.spoofName">Spoof Module Name</label>
-                        </div>
-                        
-                        <h3 class="section-title" data-i18n="stealth.performance">Performance</h3>
+                        <h3 class="section-title" data-i18n="settings.performance">Performance</h3>
                         
                         <div class="text-field">
                             <select id="optLevel">
-                                <option value="0" data-i18n="stealth.optOff">Disabled</option>
-                                <option value="1" data-i18n="stealth.optFast">Fast</option>
-                                <option value="2" data-i18n="stealth.optUltra">Ultra</option>
+                                <option value="0" data-i18n="settings.optOff">Disabled</option>
+                                <option value="1" data-i18n="settings.optFast">Fast</option>
+                                <option value="2" data-i18n="settings.optUltra">Ultra</option>
                             </select>
-                            <label data-i18n="stealth.optLevel">Optimization Level</label>
+                            <label data-i18n="settings.optLevel">Optimization Level</label>
                         </div>
                         
                         <div class="text-field">
                             <input type="number" id="mountDelay" placeholder=" " min="0" max="10000">
-                            <label data-i18n="stealth.mountDelay">Mount Delay (ms)</label>
+                            <label data-i18n="settings.mountDelay">Mount Delay (ms)</label>
                         </div>
                         
                         <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="stealth.parallelMount">Parallel Mounting</span>
+                            <span class="toggle-label" data-i18n="settings.parallelMount">Parallel Mounting</span>
                             <label class="switch">
                                 <input type="checkbox" id="parallelMount">
                                 <span class="slider"></span>
@@ -366,116 +354,17 @@
                 </div>
                 <span class="label" data-i18n="tabs.logs">Logs</span>
             </button>
-            <button class="nav-tab" data-tab="stealth">
+            <button class="nav-tab" data-tab="settings">
                 <div class="icon-container">
                     <svg viewBox="0 0 24 24" width="24" height="24">
                         <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
                     </svg>
                 </div>
-                <span class="label" data-i18n="tabs.stealth">Stealth</span>
+                <span class="label" data-i18n="tabs.settings">Settings</span>
             </button>
         </nav>
     </div>
 
     <script src="./assets/md3.js"></script>
-    <script>
-        // Initialize help icons after DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add help icons to config fields
-            setTimeout(function() {
-                initHelpIcons();
-            }, 100);
-        });
-        
-        function initHelpIcons() {
-            // Config Tab
-            const moduleDirField = document.querySelector('#moduleDir')?.closest('.text-field');
-            if (moduleDirField && !moduleDirField.querySelector('.help-icon')) {
-                moduleDirField.appendChild(createHelpIcon('moduleDir'));
-            }
-            
-            const logFileField = document.querySelector('#logFile')?.closest('.text-field');
-            if (logFileField && !logFileField.querySelector('.help-icon')) {
-                logFileField.appendChild(createHelpIcon('logFile'));
-            }
-            
-            const mountSourceField = document.querySelector('#mountSource')?.closest('.text-field');
-            if (mountSourceField && !mountSourceField.querySelector('.help-icon')) {
-                mountSourceField.appendChild(createHelpIcon('mountSource'));
-            }
-            
-            const debugToggle = document.querySelector('#debugMode')?.closest('.toggle-field');
-            if (debugToggle && !debugToggle.querySelector('.help-icon')) {
-                debugToggle.appendChild(createHelpIcon('debug'));
-            }
-            
-            const umountToggle = document.querySelector('#umountMode')?.closest('.toggle-field');
-            if (umountToggle && !umountToggle.querySelector('.help-icon')) {
-                umountToggle.appendChild(createHelpIcon('umount'));
-            }
-            
-            const partitionsField = document.querySelector('#partitions')?.closest('.text-field');
-            if (partitionsField && !partitionsField.querySelector('.help-icon')) {
-                partitionsField.appendChild(createHelpIcon('partitions'));
-            }
-            
-            // Stealth Tab
-            const stealthToggle = document.querySelector('#stealthMode')?.closest('.toggle-field');
-            if (stealthToggle && !stealthToggle.querySelector('.help-icon')) {
-                stealthToggle.appendChild(createHelpIcon('stealthEnable'));
-            }
-            
-            const randomIdToggle = document.querySelector('#randomizeId')?.closest('.toggle-field');
-            if (randomIdToggle && !randomIdToggle.querySelector('.help-icon')) {
-                randomIdToggle.appendChild(createHelpIcon('randomId'));
-            }
-            
-            const hideLogsToggle = document.querySelector('#hideMountLogs')?.closest('.toggle-field');
-            if (hideLogsToggle && !hideLogsToggle.querySelector('.help-icon')) {
-                hideLogsToggle.appendChild(createHelpIcon('hideLogs'));
-            }
-            
-            const hideFromListToggle = document.querySelector('#hideFromList')?.closest('.toggle-field');
-            if (hideFromListToggle && !hideFromListToggle.querySelector('.help-icon')) {
-                hideFromListToggle.appendChild(createHelpIcon('hideFromList'));
-            }
-            
-            const globalMountModeField = document.querySelector('#globalMountMode')?.closest('.text-field');
-            if (globalMountModeField && !globalMountModeField.querySelector('.help-icon')) {
-                globalMountModeField.appendChild(createHelpIcon('globalMountMode'));
-            }
-            
-            const altPathField = document.querySelector('#alternatePath')?.closest('.text-field');
-            if (altPathField && !altPathField.querySelector('.help-icon')) {
-                altPathField.appendChild(createHelpIcon('altPath'));
-            }
-            
-            const spoofNameField = document.querySelector('#spoofName')?.closest('.text-field');
-            if (spoofNameField && !spoofNameField.querySelector('.help-icon')) {
-                spoofNameField.appendChild(createHelpIcon('spoofName'));
-            }
-            
-            const optLevelField = document.querySelector('#optLevel')?.closest('.text-field');
-            if (optLevelField && !optLevelField.querySelector('.help-icon')) {
-                optLevelField.appendChild(createHelpIcon('optLevel'));
-            }
-            
-            const mountDelayField = document.querySelector('#mountDelay')?.closest('.text-field');
-            if (mountDelayField && !mountDelayField.querySelector('.help-icon')) {
-                mountDelayField.appendChild(createHelpIcon('mountDelay'));
-            }
-            
-            const parallelMountToggle = document.querySelector('#parallelMount')?.closest('.toggle-field');
-            if (parallelMountToggle && !parallelMountToggle.querySelector('.help-icon')) {
-                parallelMountToggle.appendChild(createHelpIcon('parallelMount'));
-            }
-            
-            // Module mode hints
-            const modeHint = document.querySelector('.mode-hint');
-            if (modeHint && !modeHint.querySelector('.help-icon')) {
-                modeHint.appendChild(createHelpIcon('globalMountMode'));
-            }
-        }
-    </script>
 </body>
 </html>

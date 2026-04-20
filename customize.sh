@@ -1,6 +1,6 @@
 #!/system/bin/sh
 ############################################
-# Magic Mount Metaverse v2.3 Installer
+# Magic Mount Metaverse v3.0 Installer
 # Author: GitHub@FHYUYO/酷安@枫原羽悠
 ############################################
 
@@ -13,7 +13,7 @@ METAMODULE_LINK="/data/adb/metamodule"
 
 ui_print ""
 ui_print "╔═══════════════════════════════════════╗"
-ui_print "║  Magic Mount Metaverse v2.3 Installer║"
+ui_print "║  Magic Mount Metaverse v3.0 Installer  ║"
 ui_print "╚═══════════════════════════════════════╝"
 ui_print ""
 
