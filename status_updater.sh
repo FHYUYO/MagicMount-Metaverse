@@ -15,6 +15,15 @@ LOG_FILE="$CONFIG_DIR/mm.log"
 GLOBAL_MODE="magic"
 MODULE_MODES_JSON="{}"
 
+
+# 检查模块是否包含可挂载的分区
+is_module_mountable() {
+    local mod="$1"
+    for part in system vendor odm my_product system_ext product vendor_dlkm odm_dlkm system_dlkm; do
+        [ -d "$mod/$part" ] && return 0
+    done
+    return 1
+}
 # 读取全局配置
 read_global_config() {
     if [ -f "$EXTENDED_CONFIG" ]; then
@@ -55,7 +64,7 @@ count_modules() {
     for mod in "$MODULE_DIR"/*; do
         # 基本检查
         [ -d "$mod" ] || continue
-        [ -d "$mod/system" ] || continue
+        is_module_mountable "$mod" || continue
         
         local name=$(basename "$mod")
         
@@ -131,7 +140,7 @@ get_module_list() {
     
     for mod in "$MODULE_DIR"/*; do
         [ -d "$mod" ] || continue
-        [ -d "$mod/system" ] || continue
+        is_module_mountable "$mod" || continue
         
         local name=$(basename "$mod")
         [ "$name" = "Magic-Mount-Metaverse" ] && continue

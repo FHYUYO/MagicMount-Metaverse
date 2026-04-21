@@ -1,35 +1,42 @@
 #!/system/bin/sh
 ############################################
-# Magic Mount Metaverse Uninstall Script v2.3
-# Author: GitHub@FHYUYO
+# Magic Mount Metaverse - uninstall.sh
+# Version: v3.3
 ############################################
 
-MODULE_DATA_DIR="/data/adb/magic_mount"
+MODPATH="/data/adb/modules/Magic-Mount-Metaverse"
 
 ui_print ""
-ui_print "========================================"
-ui_print "  Magic Mount Metaverse Uninstaller"
-ui_print "========================================"
-ui_print ""
+ui_print "Uninstalling Magic Mount Metaverse v3.3..."
 
-# 清理符号链接
-METAMODULE_LINK="/data/adb/metamodule"
-if [ -L "$METAMODULE_LINK" ]; then
-    rm -f "$METAMODULE_LINK" 2>/dev/null
-    ui_print "[*] Removed metamodule link"
+# 清理二进制文件
+if [ -f "$MODPATH/mmd" ]; then
+    rm -f "$MODPATH/mmd"
 fi
 
-# 清理挂载
-MODDIR="/data/adb/modules/Magic-Mount-Metaverse"
-if [ -d "$MODDIR/mnt" ]; then
-    umount -l "$MODDIR/mnt" 2>/dev/null
-    rmdir "$MODDIR/mnt" 2>/dev/null
-    ui_print "[*] Cleaned up mount points"
+if [ -f "$MODPATH/mm_overlay" ]; then
+    rm -f "$MODPATH/mm_overlay"
 fi
 
-# 提示用户
+# 清理脚本
+for script in metamount.sh metainstall.sh metauninstall.sh post-mount.sh service.sh status_updater.sh; do
+    if [ -f "$MODPATH/$script" ]; then
+        rm -f "$MODPATH/$script"
+    fi
+done
+
+# 清理配置文件（可选）
+# 取消注释以下行以清除用户数据
+# rm -rf /data/adb/magic_mount
+
+# 清理链接
+if [ -L "/data/adb/metamodule" ]; then
+    rm -f "/data/adb/metamodule"
+fi
+
 ui_print ""
-ui_print "[*] Module will be removed on next reboot"
+ui_print "[+] Magic Mount Metaverse v3.3 uninstalled"
+ui_print "[+] Please reboot to complete uninstallation"
 ui_print ""
 
 exit 0

@@ -1,8 +1,8 @@
 id=Magic-Mount-Metaverse
 metamodule=1
 name=Magic Mount Metaverse
-version=v3.0
-versionCode=300
+version=v3.4.1
+versionCode=341
 author=GitHub@FHYUYO/酷安@枫原羽悠
-description=Magic: 0 | Overlayfs: 0 | Ready
+description=Magic Mount Metaverse v3.4.1 - 支持OverlayFS和Magic双模式挂载，支持所有分区(system/vendor/odm等)。
 updateJson=https://raw.githubusercontent.com/FHYUYO/MagicMount-Metaverse/main/update.json

@@ -1,8 +1,21 @@
 /**
- * Magic Mount Metaverse v3.0 - Material Design 3 UI
+ * Magic Mount Metaverse v3.4.1 - Material Design 3 UI
+ * Enhanced Metamodule Framework
  * Module Identification & Dual Mount Mode Support
- * Lemon Gradient Theme + Help System + Full i18n
- * Version: v3.0
+ * 
+ * v3.4.1-fixed Changes:
+ *   - Fixed language switch dropdown
+ *   - Fixed partition save issue
+ *   - Changed CPU/Memory/Disk to Android version/Kernel/Device info
+ *   - Removed "Show/Hide Unmounted" button
+ *   - Changed Logs tab to About tab
+ *   - Added project link, QQ group, tutorial, donate QR code
+ *   - Added "Ignore" option for modules
+ *   - Force mount now only affects single module
+ *   - Only modules with specific mount mode will be mounted
+ *   - Click on selected mount mode to deselect (back to global)
+ * 
+ * Version: v3.4.1
  */
 
 // ===== Configuration =====
@@ -14,7 +27,7 @@ const MODULE_DIR = '/data/adb/modules';
 // ===== State =====
 const state = {
     theme: localStorage.getItem('mm-theme') || 'dark',
-    lang: localStorage.getItem('mm-lang') || 'en',
+    lang: localStorage.getItem('mm-lang') || 'zh',
     animations: localStorage.getItem('mm-animations') !== 'false',
     autoRefresh: parseInt(localStorage.getItem('mm-refresh') || '1'),
     showMetrics: localStorage.getItem('mm-metrics') !== 'false',
@@ -26,86 +39,24 @@ const state = {
     currentLog: 'current',
     globalMountMode: 'magic',
     moduleModes: {},
-    expandedModule: null
+    forceMountModules: {},
+    ignoredModules: {},
+    expandedModule: null,
+    showHidden: false
 };
+
+// ===== Supported Partitions =====
+const SUPPORTED_PARTITIONS = [
+    'system', 'vendor', 'odm', 'my_product', 'system_ext', 
+    'product', 'vendor_dlkm', 'odm_dlkm', 'system_dlkm'
+];
 
 // ===== Translations (Full i18n) =====
 const i18n = {
-    en: {
-        status: { mount: 'Mount', stealth: 'Stealth', modules: 'Modules' },
-        metrics: { cpu: 'CPU', memory: 'Memory', disk: 'Disk' },
-        tabs: { config: 'Config', modules: 'Modules', logs: 'Logs', settings: 'Settings' },
-        config: {
-            title: 'Configuration',
-            moduleDir: 'Module Directory',
-            logFile: 'Log File',
-            mountSource: 'Mount Source',
-            debug: 'Debug Mode',
-            umount: 'Enable Unmount',
-            partitions: 'Extra Partitions',
-            pathLabel: 'Config Path'
-        },
-        modules: { 
-            title: 'Modules', 
-            loading: 'Loading modules...', 
-            empty: 'No modules found',
-            emptyHint: 'No modules found in the module directory',
-            path: 'Path',
-            mountMode: 'Mount Mode',
-            magic: 'Magic',
-            overlayfs: 'OverlayFS',
-            id: 'ID',
-            version: 'Version',
-            description: 'Description',
-            status: 'Status',
-            mounted: 'Mounted',
-            unmounted: 'Unmounted',
-            defaultMode: 'Default Mode',
-            searchPlaceholder: 'Search modules...',
-            reload: 'Reload',
-            save: 'Save Changes',
-            saving: 'Saving...',
-            saveSuccess: 'Changes saved successfully',
-            magicDesc: 'Magic mode uses a single directory for mounting',
-            overlayDesc: 'OverlayFS mode uses dual directory for better isolation'
-        },
-        logs: { title: 'Logs', current: 'Current', old: 'Old', refresh: 'Refresh', empty: 'No logs available', loading: 'Loading...' },
-        settings: {
-            title: 'Settings',
-            animations: 'Enable Animations',
-            refresh: 'Auto Refresh (sec)',
-            metrics: 'Show Metrics',
-            theme: 'Theme',
-            themeDark: 'Dark',
-            themeLight: 'Light',
-            about: 'About',
-            version: 'Version',
-            stealthSettings: 'Stealth Settings',
-            general: 'General',
-            enable: 'Enable Stealth Mode',
-            randomId: 'Randomize Module ID',
-            hideLogs: 'Hide Mount Logs',
-            hideFromList: 'Hide from Module List',
-            mountMode: 'Mount Mode',
-            mountModeGlobal: 'Global Mount Mode',
-            magicMode: 'Magic',
-            overlayfsMode: 'OverlayFS',
-            performance: 'Performance',
-            optLevel: 'Optimization Level',
-            optOff: 'Disabled',
-            optFast: 'Fast',
-            optUltra: 'Ultra',
-            mountDelay: 'Mount Delay (ms)',
-            parallelMount: 'Parallel Mounting'
-        },
-        btn: { reload: 'Reload', save: 'Save', apply: 'Apply', close: 'Close' },
-        toast: { loadSuccess: 'Configuration loaded', loadError: 'Failed to load config', saveSuccess: 'Saved successfully', saveError: 'Save failed', modeSaved: 'Mount mode saved' },
-        dialog: { help: 'Help', cancel: 'Close', confirm: 'OK' }
-    },
     zh: {
         status: { mount: '挂载', stealth: '隐身', modules: '模块' },
-        metrics: { cpu: 'CPU', memory: '内存', disk: '磁盘' },
-        tabs: { config: '配置', modules: '模块', logs: '日志', settings: '设置' },
+        sysinfo: { android: '安卓版本', kernel: '内核版本', device: '机型信息' },
+        tabs: { config: '配置', modules: '模块', about: '关于', settings: '设置' },
         config: {
             title: '配置',
             moduleDir: '模块目录',
@@ -113,7 +64,8 @@ const i18n = {
             mountSource: '挂载源',
             debug: '调试模式',
             umount: '启用卸载',
-            partitions: '额外分区',
+            partitions: '分区',
+            partitionsDesc: '选择要挂载的分区',
             pathLabel: '配置路径'
         },
         modules: { 
@@ -123,14 +75,17 @@ const i18n = {
             emptyHint: '模块目录中未找到模块',
             path: '路径',
             mountMode: '挂载模式',
-            magic: 'Magic模式',
-            overlayfs: 'OverlayFS模式',
+            magic: 'Magic',
+            overlayfs: 'OverlayFS',
+            ignore: '忽略',
             id: 'ID',
             version: '版本',
             description: '描述',
             status: '状态',
             mounted: '已挂载',
             unmounted: '未挂载',
+            ignored: '已忽略',
+            customIgnored: '自定义忽略',
             defaultMode: '默认模式',
             searchPlaceholder: '搜索模块...',
             reload: '刷新',
@@ -138,9 +93,34 @@ const i18n = {
             saving: '保存中...',
             saveSuccess: '更改已保存',
             magicDesc: 'Magic模式使用单目录挂载',
-            overlayDesc: 'OverlayFS模式使用双目录隔离'
+            overlayDesc: 'OverlayFS模式使用双目录隔离',
+            ignoreDesc: '忽略后跳过不被magic和overlayfs挂载',
+            showHidden: '显示隐藏',
+            hideHidden: '隐藏隐藏',
+            forceMount: '强制挂载',
+            forceMounted: '已强制挂载',
+            unforceMount: '取消强制',
+            ignoreMarker: '包含忽略标记(原生)',
+            ignoreHint: '此模块有ignore标记，但已启用强制挂载',
+            customIgnore: '自定义忽略',
+            customIgnoreDesc: '忽略此模块，不进行overlayfs和magic挂载',
+            forceMountDesc: '即使模块有skip_mount标记也强制挂载',
+            hiddenModule: '隐藏模块',
+            hiddenModuleHint: '此模块不需要挂载（无system目录）'
         },
-        logs: { title: '日志', current: '当前', old: '旧日志', refresh: '刷新', empty: '暂无日志', loading: '加载中...' },
+        about: {
+            projectInfo: '项目信息',
+            links: '相关链接',
+            projectAddr: 'GitHub项目',
+            qqGroup: 'QQ群',
+            tutorial: '使用教程',
+            tut1: { title: '配置页面', desc: '选择要挂载的分区，配置挂载源' },
+            tut2: { title: '模块页面', desc: '设置每个模块的挂载模式，强制挂载或忽略特定模块' },
+            tut3: { title: '设置页面', desc: '启用隐身模式和性能优化' },
+            tut4: { title: '重启', desc: '重启设备以应用更改' },
+            donate: '☕ 支持开发',
+            donateHint: '扫码捐赠'
+        },
         settings: {
             title: '设置',
             animations: '启用动画',
@@ -170,13 +150,129 @@ const i18n = {
             parallelMount: '并行挂载'
         },
         btn: { reload: '重新加载', save: '保存', apply: '应用', close: '关闭' },
-        toast: { loadSuccess: '配置已加载', loadError: '加载配置失败', saveSuccess: '保存成功', saveError: '保存失败', modeSaved: '挂载模式已保存' },
+        toast: { 
+            loadSuccess: '配置已加载', 
+            loadError: '加载配置失败', 
+            saveSuccess: '保存成功', 
+            saveError: '保存失败', 
+            modeSaved: '挂载模式已保存', 
+            forceSaved: '强制挂载设置已保存',
+            ignoreSaved: '忽略设置已保存'
+        },
         dialog: { help: '帮助', cancel: '关闭', confirm: '确定' }
+    },
+    en: {
+        status: { mount: 'Mount', stealth: 'Stealth', modules: 'Modules' },
+        sysinfo: { android: 'Android', kernel: 'Kernel', device: 'Device' },
+        tabs: { config: 'Config', modules: 'Modules', about: 'About', settings: 'Settings' },
+        config: {
+            title: 'Configuration',
+            moduleDir: 'Module Directory',
+            logFile: 'Log File',
+            mountSource: 'Mount Source',
+            debug: 'Debug Mode',
+            umount: 'Enable Unmount',
+            partitions: 'Partitions',
+            partitionsDesc: 'Select partitions to mount',
+            pathLabel: 'Config Path'
+        },
+        modules: { 
+            title: 'Modules', 
+            loading: 'Loading modules...', 
+            empty: 'No modules found',
+            emptyHint: 'No modules found in the module directory',
+            path: 'Path',
+            mountMode: 'Mount Mode',
+            magic: 'Magic',
+            overlayfs: 'OverlayFS',
+            ignore: 'Ignore',
+            id: 'ID',
+            version: 'Version',
+            description: 'Description',
+            status: 'Status',
+            mounted: 'Mounted',
+            unmounted: 'Unmounted',
+            ignored: 'Ignored',
+            customIgnored: 'Custom Ignored',
+            defaultMode: 'Default Mode',
+            searchPlaceholder: 'Search modules...',
+            reload: 'Reload',
+            save: 'Save Changes',
+            saving: 'Saving...',
+            saveSuccess: 'Changes saved successfully',
+            magicDesc: 'Magic mode uses a single directory for mounting',
+            overlayDesc: 'OverlayFS mode uses dual directory for better isolation',
+            ignoreDesc: 'Skip from both magic and overlayfs mounting',
+            showHidden: 'Show Hidden',
+            hideHidden: 'Hide Hidden',
+            forceMount: 'Force Mount',
+            forceMounted: 'Force Mounted',
+            unforceMount: 'Remove Force',
+            ignoreMarker: 'Has ignore marker (native)',
+            ignoreHint: 'This module has an ignore marker but force mount is enabled',
+            customIgnore: 'Custom Ignore',
+            customIgnoreDesc: 'Ignore this module from overlayfs and magic mount',
+            forceMountDesc: 'Force mount even if module has skip_mount marker',
+            hiddenModule: 'Hidden Module',
+            hiddenModuleHint: 'This module does not need mounting (no system dir)'
+        },
+        about: {
+            projectInfo: 'Project Info',
+            links: 'Links',
+            projectAddr: 'GitHub Project',
+            qqGroup: 'QQ Group',
+            tutorial: 'Usage Tutorial',
+            tut1: { title: 'Config Tab', desc: 'Select partitions to mount and configure mount source' },
+            tut2: { title: 'Modules Tab', desc: 'Set mount mode for each module, force mount or ignore specific modules' },
+            tut3: { title: 'Settings Tab', desc: 'Enable stealth mode and performance optimization' },
+            tut4: { title: 'Reboot', desc: 'Reboot device to apply changes' },
+            donate: '☕ Support Development',
+            donateHint: 'Scan QR code to donate'
+        },
+        settings: {
+            title: 'Settings',
+            animations: 'Enable Animations',
+            refresh: 'Auto Refresh (sec)',
+            metrics: 'Show Metrics',
+            theme: 'Theme',
+            themeDark: 'Dark',
+            themeLight: 'Light',
+            about: 'About',
+            version: 'Version',
+            stealthSettings: 'Stealth Settings',
+            general: 'General',
+            enable: 'Enable Stealth Mode',
+            randomId: 'Randomize Module ID',
+            hideLogs: 'Hide Mount Logs',
+            hideFromList: 'Hide from Module List',
+            mountMode: 'Mount Mode',
+            mountModeGlobal: 'Global Mount Mode',
+            magicMode: 'Magic',
+            overlayfsMode: 'OverlayFS',
+            performance: 'Performance',
+            optLevel: 'Optimization Level',
+            optOff: 'Disabled',
+            optFast: 'Fast',
+            optUltra: 'Ultra',
+            mountDelay: 'Mount Delay (ms)',
+            parallelMount: 'Parallel Mounting'
+        },
+        btn: { reload: 'Reload', save: 'Save', apply: 'Apply', close: 'Close' },
+        toast: { 
+            loadSuccess: 'Configuration loaded', 
+            loadError: 'Failed to load config', 
+            saveSuccess: 'Saved successfully', 
+            saveError: 'Save failed', 
+            modeSaved: 'Mount mode saved', 
+            forceSaved: 'Force mount setting saved',
+            ignoreSaved: 'Ignore setting saved'
+        },
+        dialog: { help: 'Help', cancel: 'Close', confirm: 'OK' }
     },
     ja: {
         status: { mount: 'マウント', stealth: 'ステルス', modules: 'モジュール' },
-        metrics: { cpu: 'CPU', memory: 'メモリ', disk: 'ディスク' },
-        tabs: { config: '設定', modules: 'モジュール', logs: 'ログ', settings: '設定' },
+        sysinfo: { android: 'Android', kernel: 'カーネル', device: 'デバイス' },
+        tabs: { config: '設定', modules: 'モジュール', about: 'について', settings: '設定' },
         config: {
             title: '設定',
             moduleDir: 'モジュールディレクトリ',
@@ -184,24 +280,28 @@ const i18n = {
             mountSource: 'マウントソース',
             debug: 'デバッグモード',
             umount: 'アンマウント有効',
-            partitions: '拡張パーティション',
+            partitions: 'パーティション',
+            partitionsDesc: 'マウントするパーティションを選択',
             pathLabel: '設定パス'
         },
         modules: { 
             title: 'モジュール', 
-            loading: 'モジュール読み込み中...', 
+            loading: 'モジュールを読み込み中...', 
             empty: 'モジュールが見つかりません',
             emptyHint: 'モジュールディレクトリにモジュールが見つかりません',
             path: 'パス',
             mountMode: 'マウントモード',
             magic: 'Magic',
             overlayfs: 'OverlayFS',
+            ignore: '無視',
             id: 'ID',
             version: 'バージョン',
             description: '説明',
             status: 'ステータス',
             mounted: 'マウント済み',
             unmounted: '未マウント',
+            ignored: '無視',
+            customIgnored: 'カスタム無視',
             defaultMode: 'デフォルトモード',
             searchPlaceholder: 'モジュールを検索...',
             reload: '再読み込み',
@@ -209,9 +309,34 @@ const i18n = {
             saving: '保存中...',
             saveSuccess: '変更が保存されました',
             magicDesc: 'Magicモードは単一ディレクトリを使用',
-            overlayDesc: 'OverlayFSモードは二重ディレクトリを使用'
+            overlayDesc: 'OverlayFSモードはデュアルディレクトリを使用',
+            ignoreDesc: 'magicとoverlayfsのマウントをスキップ',
+            showHidden: '隠れたを表示',
+            hideHidden: '隠れたを非表示',
+            forceMount: '強制マウント',
+            forceMounted: '強制マウント済み',
+            unforceMount: '強制解除',
+            ignoreMarker: 'ignoreマーカーあり(ネイティブ)',
+            ignoreHint: 'このモジュールにはignoreマーカーがありますが、強制マウントが有効です',
+            customIgnore: 'カスタム無視',
+            customIgnoreDesc: 'このモジュールをoverlayfsとmagicマウントから除外',
+            forceMountDesc: 'モジュールにskip_mountマーカーがあっても強制マウント',
+            hiddenModule: '隠しモジュール',
+            hiddenModuleHint: 'このモジュールはマウント不要(systemディレクトリなし)'
         },
-        logs: { title: 'ログ', current: '現在', old: '旧ログ', refresh: '更新', empty: 'ログがありません', loading: '読み込み中...' },
+        about: {
+            projectInfo: 'プロジェクト情報',
+            links: 'リンク',
+            projectAddr: 'GitHubプロジェクト',
+            qqGroup: 'QQグループ',
+            tutorial: '使い方チュートリアル',
+            tut1: { title: '設定タブ', desc: 'マウントするパーティションを選択し、マウントソースを設定' },
+            tut2: { title: 'モジュールタブ', desc: '各モジュールのマウントモードを設定、強制マウントまたは特定のモジュールを無視' },
+            tut3: { title: '設定タブ', desc: 'ステルスモードとパフォーマンス最適化を有効にする' },
+            tut4: { title: '再起動', desc: 'デバイスを再起動して変更を適用' },
+            donate: '☕ 開発をサポート',
+            donateHint: 'QRコードをスキャンして寄付'
+        },
         settings: {
             title: '設定',
             animations: 'アニメーション有効',
@@ -241,66 +366,41 @@ const i18n = {
             parallelMount: '並列マウント'
         },
         btn: { reload: '再読み込み', save: '保存', apply: '適用', close: '閉じる' },
-        toast: { loadSuccess: '設定を読み込みました', loadError: '設定の読み込みに失敗', saveSuccess: '保存しました', saveError: '保存に失敗', modeSaved: 'マウントモードを保存しました' },
+        toast: { 
+            loadSuccess: '設定を読み込みました', 
+            loadError: '設定の読み込みに失敗', 
+            saveSuccess: '保存しました', 
+            saveError: '保存に失敗', 
+            modeSaved: 'マウントモードを保存しました', 
+            forceSaved: '強制マウント設定を保存しました',
+            ignoreSaved: '無視設定を保存しました'
+        },
         dialog: { help: 'ヘルプ', cancel: '閉じる', confirm: 'OK' }
     }
 };
 
-// ===== Help Content (Full) =====
+// ===== Help Content =====
 const helpContent = {
-    en: {
-        moduleDir: 'Specifies the directory where modules are located. Default is /data/adb/modules. Changing this may affect module mounting.',
-        logFile: 'Path to the log file where mount operations are recorded. Useful for debugging mount issues.',
-        mountSource: 'Select the kernel-level framework: KSU (KernelSU) or APatch. This determines how modules are mounted.',
-        debug: 'Enables verbose logging for troubleshooting. Increases log output but helps diagnose issues.',
-        umount: 'Allows modules to be properly unmounted on reboot. Disable only if you need persistent mounts.',
-        partitions: 'Additional system partitions to mount (comma-separated). Advanced option for custom setups.',
-        stealthEnable: 'Enables stealth mode to hide the presence of mount operations from detection tools.',
-        randomId: 'Randomizes module IDs to prevent apps from detecting specific module fingerprints.',
-        hideLogs: 'Prevents mount operations from appearing in system logs. Reduces detectability.',
-        hideFromList: 'Hides modules from Magisk Manager module list. Visual stealth option.',
-        optLevel: 'Optimization level affects mount speed vs compatibility: Disabled (standard), Fast (reduced wait), Ultra (per-module processing).',
-        mountDelay: 'Delay in milliseconds before mounting starts. Some devices need delay for proper initialization.',
-        parallelMount: 'Mount multiple modules simultaneously instead of sequentially. Faster but may cause issues on some devices.',
-        globalMountMode: 'Global mount mode applies to all modules unless overridden: Magic (standard single-directory), OverlayFS (dual-directory for better isolation).',
-        magicMode: 'Magic mode uses a single directory for mounting. Standard and widely compatible.',
-        overlayfsMode: 'OverlayFS mode separates metadata and content into different directories. Better for complex module interactions.'
-    },
     zh: {
-        moduleDir: '指定模块所在目录。默认为 /data/adb/modules。修改可能影响模块挂载。',
-        logFile: '记录挂载操作的日志文件路径。用于调试挂载问题。',
-        mountSource: '选择内核级框架：KSU (KernelSU) 或 APatch。决定模块如何挂载。',
-        debug: '启用详细日志记录以便故障排除。增加日志输出但有助于诊断问题。',
-        umount: '允许模块在重启时正确卸载。仅在需要持久挂载时禁用。',
-        partitions: '要挂载的额外系统分区（逗号分隔）。高级选项。',
-        stealthEnable: '启用隐身模式，从检测工具隐藏挂载操作的存在。',
-        randomId: '随机化模块ID，防止应用检测特定模块指纹。',
-        hideLogs: '阻止挂载操作出现在系统日志中。降低可检测性。',
-        hideFromList: '在 Magisk Manager 模块列表中隐藏模块。视觉隐身选项。',
-        optLevel: '优化级别影响挂载速度与兼容性：禁用（标准）、快速（减少等待）、极致（逐模块处理）。',
-        mountDelay: '挂载开始前的延迟毫秒数。部分设备需要延迟以正确初始化。',
-        parallelMount: '同时挂载多个模块而非顺序挂载。更快但可能在某些设备上出问题。',
-        globalMountMode: '全局挂载模式应用于所有模块（除非单独覆盖）：Magic（标准单目录）、OverlayFS（双目录更好隔离）。',
-        magicMode: 'Magic模式使用单个目录挂载。标准且广泛兼容。',
-        overlayfsMode: 'OverlayFS模式将元数据和内容分离到不同目录。更适合复杂模块交互。'
+        partitions: '选择要处理模块挂载的系统分区。默认：所有分区。',
+        partitionsSelect: '点击选择/取消选择分区。选中的分区将被挂载。',
+        showHidden: '显示不需要挂载的模块（如纯shell模块、无system目录的模块）。',
+        customIgnore: '启用后，此模块将完全跳过overlayfs和magic挂载操作。',
+        forceMount: '即使模块有skip_mount标记或被禁用，也强制挂载此模块。'
+    },
+    en: {
+        partitions: 'Select which system partitions to handle for module mounting. Default: all partitions.',
+        partitionsSelect: 'Click to select/deselect partitions. Selected partitions will be mounted.',
+        showHidden: 'Show modules that do not need mounting (e.g., pure shell modules, no system directory).',
+        customIgnore: 'When enabled, this module will be completely skipped from overlayfs and magic mount operations.',
+        forceMount: 'Force mount this module even if it has skip_mount marker or is disabled.'
     },
     ja: {
-        moduleDir: 'モジュールが存在するディレクトリを指定します。デフォルトは/data/adb/modules。変更するとマウントに影響する可能性があります。',
-        logFile: 'マウント操作が記録されるログファイルのパス。デバッグに便利です。',
-        mountSource: 'カーネルレベルフレームワークを選択：KSU (KernelSU) または APatch。モジュールのマウント方法が決まります。',
-        debug: 'トラブルシューティング用に詳細ログを有効にします。ログ出力が増えますが、問題の診断に役立ちます。',
-        umount: '再起動時にモジュールが適切にアンマウントされることを許可します。永続マウントが必要な場合のみ無効にしてください。',
-        partitions: 'マウントする追加システムパーティション（カンマ区切り）。高度なオプションです。',
-        stealthEnable: '検出ツールからマウント操作の存在を非表示にするステルスモードを有効にします。',
-        randomId: 'モジュールIDをランダム化して、アプリが特定のモジュールフィンガープリントを検出することを防ぎます。',
-        hideLogs: 'マウント操作がシステムログに表示されるのを防ぎます。検出可能性が低下します。',
-        hideFromList: 'Magisk Managerのモジュールリストからモジュールを非表示にします。視覚的なステルスオプション。',
-        optLevel: '最適化レベルはマウント速度と互換性に影響します：無効（標準）、高速（待機減少）、ウルトラ（モジュールごと処理）。',
-        mountDelay: 'マウント開始前の遅延（ミリ秒）。一部のデバイスでは適切な初期化に遅延が必要です。',
-        parallelMount: '複数のモジュールを同時にマウントします。高速ですが、一部のデバイスで問題を起こす可能性があります。',
-        globalMountMode: 'グローバルマウントモードは全モジュールに適用：Magic（標準単一ディレクトリ）、OverlayFS（分離用デュアルディレクトリ）。',
-        magicMode: 'Magicモードは単一ディレクトリを使用してマウントします。標準的で広く互換性があります。',
-        overlayfsMode: 'OverlayFSモードはメタデータとコンテンツを別のディレクトリに分離します。複雑なモジュール相互作用に適しています。'
+        partitions: 'モジュールマウント用に処理するシステムパーティションを選びます。デフォルト：全て。',
+        partitionsSelect: 'クリックしてパーティションを選択/選択解除。選択したパーティションがマウントされます。',
+        showHidden: 'マウント不要なモジュールを表示（例：純粋なシェルモジュール、systemディレクトリなし）。',
+        customIgnore: '有効にすると、このモジュールはoverlayfsとmagicマウント操作から完全にスキップされます。',
+        forceMount: 'モジュールにskip_mountマーカーがある거나無効でも、このモジュールを強制マウントします。'
     }
 };
 
@@ -319,7 +419,19 @@ function updateI18n() {
         const key = el.getAttribute('data-i18n');
         el.textContent = t(key);
     });
-    document.getElementById('langCode').textContent = state.lang.toUpperCase();
+    document.getElementById('langCode').textContent = state.lang === 'zh' ? '中' : (state.lang === 'ja' ? '日' : 'EN');
+    
+    // Update language dropdown active state
+    document.querySelectorAll('.lang-option').forEach(opt => {
+        if (opt.dataset.lang === state.lang) {
+            opt.classList.add('active');
+        } else {
+            opt.classList.remove('active');
+        }
+    });
+    
+    // Update partition display
+    updatePartitionDisplay();
 }
 
 function showToast(message, type = 'info') {
@@ -433,14 +545,14 @@ function getDialogIcon(type) {
 // ===== Help System =====
 function showHelp(key) {
     const lang = state.lang || 'en';
-    const content = helpContent[lang]?.[key] || helpContent.en[key] || 'No help available for this item.';
+    const content = helpContent[lang]?.[key] || helpContent.en[key] || 'No help available.';
     showDialog(t('dialog.help'), `<p class="help-text">${content}</p>`, { icon: 'help', showCancel: false, confirmText: t('dialog.confirm') });
 }
 
 function createHelpIcon(key) {
     const icon = document.createElement('span');
     icon.className = 'help-icon';
-    icon.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/></svg>';
+    icon.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"/>';
     icon.addEventListener('click', (e) => {
         e.stopPropagation();
         showHelp(key);
@@ -449,51 +561,19 @@ function createHelpIcon(key) {
 }
 
 function initHelpIcons() {
-    // Config Tab
-    addHelpIcon('#moduleDir', 'moduleDir');
-    addHelpIcon('#logFile', 'logFile');
-    addHelpIcon('#mountSource', 'mountSource');
-    addHelpIcon('#debugMode', 'debug', true);
-    addHelpIcon('#umountMode', 'umount', true);
-    addHelpIcon('#partitions', 'partitions');
-    
-    // Settings Tab (Stealth)
-    addHelpIcon('#stealthMode', 'stealthEnable', true);
-    addHelpIcon('#randomizeId', 'randomId', true);
-    addHelpIcon('#hideMountLogs', 'hideLogs', true);
-    addHelpIcon('#hideFromList', 'hideFromList', true);
-    addHelpIcon('#globalMountMode', 'globalMountMode');
-    addHelpIcon('#optLevel', 'optLevel');
-    addHelpIcon('#mountDelay', 'mountDelay');
-    addHelpIcon('#parallelMount', 'parallelMount', true);
-    
-    // Mode hint
-    const modeHint = document.querySelector('.mode-hint');
-    if (modeHint && !modeHint.querySelector('.help-icon')) {
-        modeHint.appendChild(createHelpIcon('globalMountMode'));
-    }
+    document.querySelectorAll('[data-help]').forEach(el => {
+        const key = el.dataset.help;
+        el.appendChild(createHelpIcon(key));
+    });
 }
 
-function addHelpIcon(selector, helpKey, isToggle = false) {
-    const element = document.querySelector(selector);
-    if (!element) return;
-    
-    const field = isToggle ? element.closest('.toggle-field') : element.closest('.text-field');
-    if (field && !field.querySelector('.help-icon')) {
-        field.style.position = 'relative';
-        field.appendChild(createHelpIcon(helpKey));
-    }
-}
-
-// ===== Theme & Language =====
+// ===== Theme System =====
 function initTheme() {
+    const isDark = state.theme === 'dark';
     document.documentElement.setAttribute('data-theme', state.theme);
-    const icon = document.querySelector('.icon-theme');
-    if (icon) {
-        icon.innerHTML = state.theme === 'dark' 
-            ? '<path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>'
-            : '<path fill="currentColor" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z"/>';
-    }
+    document.querySelector('.icon-theme').innerHTML = isDark 
+        ? '<path fill="currentColor" d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/>'
+        : '<path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>';
 }
 
 function toggleTheme() {
@@ -502,42 +582,42 @@ function toggleTheme() {
     initTheme();
 }
 
+// ===== Language System - Fixed =====
 function initLangDropdown() {
-    const dropdown = document.getElementById('langMenu');
-    const langBtn = document.getElementById('langBtn');
-    const langCode = document.getElementById('langCode');
+    const btn = document.getElementById('langBtn');
+    const menu = document.getElementById('langMenu');
     
-    if (!dropdown || !langBtn) return;
-
-    langCode.textContent = state.lang.toUpperCase();
+    // Click on language button to toggle dropdown
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('show');
+    });
     
-    dropdown.querySelectorAll('.lang-option').forEach(opt => {
-        if (opt.dataset.lang === state.lang) {
-            opt.classList.add('active');
-        }
+    // Language option click handlers
+    document.querySelectorAll('.lang-option').forEach(opt => {
         opt.addEventListener('click', () => {
-            state.lang = opt.dataset.lang;
-            localStorage.setItem('mm-lang', state.lang);
-            langCode.textContent = state.lang.toUpperCase();
-            dropdown.querySelectorAll('.lang-option').forEach(o => o.classList.remove('active'));
-            opt.classList.add('active');
-            dropdown.classList.remove('active');
-            updateI18n();
-            loadConfig();
-            loadStealth();
-            loadModules();
+            const newLang = opt.dataset.lang;
+            if (newLang !== state.lang) {
+                state.lang = newLang;
+                localStorage.setItem('mm-lang', state.lang);
+                updateI18n();
+                loadModules();
+                showToast(t('toast.loadSuccess'), 'success');
+            }
+            menu.classList.remove('show');
         });
     });
-
-    langBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('active');
-    });
-
+    
+    // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!dropdown.contains(e.target) && !langBtn.contains(e.target)) {
-            dropdown.classList.remove('active');
+        if (!menu.contains(e.target) && !btn.contains(e.target)) {
+            menu.classList.remove('show');
         }
+    });
+    
+    // Prevent click propagation on menu
+    menu.addEventListener('click', (e) => {
+        e.stopPropagation();
     });
 }
 
@@ -553,7 +633,7 @@ async function loadConfig() {
             mount_source: 'KSU',
             debug: false,
             umount: true,
-            partitions: ''
+            partitions: 'system,vendor,odm,my_product,system_ext,product,vendor_dlkm,odm_dlkm,system_dlkm'
         };
 
         lines.forEach(line => {
@@ -565,40 +645,41 @@ async function loadConfig() {
             
             switch (key.trim()) {
                 case 'module_dir': state.config.module_dir = value; break;
-                case 'log_file': state.config.log_file = value; break;
                 case 'mount_source': state.config.mount_source = value; break;
+                case 'log_file': state.config.log_file = value; break;
                 case 'debug': state.config.debug = parseBool(value); break;
                 case 'umount': state.config.umount = parseBool(value); break;
                 case 'partitions': state.config.partitions = value; break;
             }
         });
 
-        try {
-            const { stdout: aokData } = await exec(`cat "${AOK_PATH}" 2>/dev/null || echo ""`);
-            if (aokData.includes('APATCH')) {
-                state.config.isApatch = true;
-            }
-        } catch {}
-
         updateConfigUI();
-        updateStatusUI();
-        
-        document.getElementById('configPath').textContent = `${t('config.pathLabel')}: ${CONFIG_PATH}`;
         
     } catch (e) {
         console.error('Load config error:', e);
-        showToast(t('toast.loadError'), 'error');
     }
 }
 
 function updateConfigUI() {
-    const c = state.config;
-    document.getElementById('moduleDir').value = c.module_dir || '/data/adb/modules';
-    document.getElementById('logFile').value = c.log_file || '/data/adb/magic_mount/mm.log';
-    document.getElementById('mountSource').value = c.mount_source || 'KSU';
-    document.getElementById('debugMode').checked = c.debug || false;
-    document.getElementById('umountMode').checked = c.umount !== false;
-    document.getElementById('partitions').value = c.partitions || '';
+    document.getElementById('moduleDir').value = state.config.module_dir || '';
+    document.getElementById('logFile').value = state.config.log_file || '';
+    document.getElementById('mountSource').value = state.config.mount_source || 'KSU';
+    document.getElementById('debugMode').checked = state.config.debug || false;
+    document.getElementById('umountMode').checked = state.config.umount !== false;
+    
+    updatePartitionDisplay();
+    document.getElementById('configPath').textContent = `${t('config.pathLabel')}: ${CONFIG_PATH}`;
+}
+
+function updatePartitionDisplay() {
+    const partitionDisplay = document.getElementById('partitionDisplay');
+    const selectedPartitions = (state.config.partitions || '').split(',').filter(p => p.trim());
+    
+    if (selectedPartitions.length === SUPPORTED_PARTITIONS.length || selectedPartitions.length === 0) {
+        partitionDisplay.textContent = state.lang === 'zh' ? '全部' : (state.lang === 'ja' ? '全て' : 'All');
+    } else {
+        partitionDisplay.textContent = `${selectedPartitions.length} ${state.lang === 'zh' ? '个已选' : (state.lang === 'ja' ? '個選択' : 'selected')}`;
+    }
 }
 
 async function saveConfig() {
@@ -609,38 +690,104 @@ async function saveConfig() {
             mount_source: document.getElementById('mountSource').value,
             debug: document.getElementById('debugMode').checked,
             umount: document.getElementById('umountMode').checked,
-            partitions: document.getElementById('partitions').value
+            partitions: getSelectedPartitions().join(',')
         };
 
         const lines = [
-            '# ===== Magic Mount Metaverse v3.0 =====',
-            '# Author: GitHub@FHYUYO/酷安@枫原羽悠',
-            '# Version: v3.0',
+            '# Magic Mount Metaverse v3.4 Configuration',
+            '# Author: GitHub@FHYUYO',
+            '# Version: v3.4',
             '',
-            '# ====== Core Settings ======',
-            `module_dir=${config.module_dir}`,
-            `mount_source=${config.mount_source}`,
-            `log_file=${config.log_file}`,
-            `debug=${config.debug}`,
+            'module_dir=' + config.module_dir,
+            'mount_source=' + config.mount_source,
+            'log_file=' + config.log_file,
+            'debug=' + config.debug,
             '',
-            '# ====== Unmount Settings ======',
-            `umount=${config.umount}`,
+            'umount=' + config.umount,
             '',
-            '# ====== Extended Partitions ======',
-            `partitions=${config.partitions}`
+            '# Supported partitions: system, vendor, odm, my_product, system_ext, product, vendor_dlkm, odm_dlkm, system_dlkm',
+            'partitions=' + config.partitions
         ];
 
-        const content = lines.join('\n').replace(/'/g, "'\\''");
-        const cmd = `mkdir -p "$(dirname '${CONFIG_PATH}')" && printf '%s\n' '${content}' > '${CONFIG_PATH}'`;
+        const content = lines.join('\n');
+        
+        const cmd = `mkdir -p "$(dirname '${CONFIG_PATH}')" && echo '${content.replace(/'/g, "'\\''")}' > '${CONFIG_PATH}'`;
         
         await exec(cmd);
         state.config = { ...state.config, ...config };
+        updatePartitionDisplay();
         showToast(t('toast.saveSuccess'), 'success');
         
     } catch (e) {
         console.error('Save config error:', e);
         showToast(t('toast.saveError'), 'error');
     }
+}
+
+// ===== Partition Selection =====
+function getSelectedPartitions() {
+    const selected = [];
+    document.querySelectorAll('.partition-chip.selected').forEach(chip => {
+        selected.push(chip.dataset.partition);
+    });
+    return selected;
+}
+
+function togglePartition(part) {
+    const chip = document.querySelector(`.partition-chip[data-partition="${part}"]`);
+    if (chip) {
+        chip.classList.toggle('selected');
+        updatePartitionDisplay();
+    }
+}
+
+function showPartitionSelector() {
+    const currentPartitions = state.config.partitions?.split(',').filter(p => p.trim()) || [];
+    
+    const content = `
+        <div class="partition-selector">
+            <p style="margin-bottom:16px;">${t('config.partitionsDesc')}</p>
+            <div class="partition-grid">
+                ${SUPPORTED_PARTITIONS.map(part => `
+                    <button class="partition-chip ${currentPartitions.includes(part) ? 'selected' : ''}" 
+                            data-partition="${part}" 
+                            onclick="togglePartition('${part}')">
+                        ${part}
+                    </button>
+                `).join('')}
+            </div>
+            <div style="margin-top:16px;">
+                <button class="md3-btn-secondary" onclick="selectAllPartitions()">${state.lang === 'zh' ? '全选' : (state.lang === 'ja' ? '全て選択' : 'Select All')}</button>
+                <button class="md3-btn-secondary" onclick="deselectAllPartitions()">${state.lang === 'zh' ? '取消' : (state.lang === 'ja' ? '選択解除' : 'Deselect')}</button>
+            </div>
+        </div>
+    `;
+    
+    showDialog(state.lang === 'zh' ? '选择分区' : (state.lang === 'ja' ? 'パーティション選択' : 'Select Partitions'), content, {
+        showCancel: true,
+        confirmText: t('dialog.confirm'),
+        onConfirm: () => {
+            const selected = getSelectedPartitions();
+            state.config.partitions = selected.join(',');
+            updatePartitionDisplay();
+            // Auto save after selection
+            saveConfig();
+        }
+    });
+}
+
+function selectAllPartitions() {
+    document.querySelectorAll('.partition-chip').forEach(chip => {
+        chip.classList.add('selected');
+    });
+    updatePartitionDisplay();
+}
+
+function deselectAllPartitions() {
+    document.querySelectorAll('.partition-chip').forEach(chip => {
+        chip.classList.remove('selected');
+    });
+    updatePartitionDisplay();
 }
 
 // ===== Stealth/Settings Operations =====
@@ -658,7 +805,9 @@ async function loadStealth() {
             mount_delay: '0',
             parallel_mount: false,
             mount_mode: 'magic',
-            module_mount_modes: '{}'
+            module_mount_modes: '{}',
+            force_mount_modules: '{}',
+            ignored_modules: '{}'
         };
 
         lines.forEach(line => {
@@ -678,11 +827,15 @@ async function loadStealth() {
                 case 'parallel_mount': state.stealth.parallel_mount = parseBool(value); break;
                 case 'mount_mode': state.stealth.mount_mode = value; break;
                 case 'module_mount_modes': state.stealth.module_mount_modes = value; break;
+                case 'force_mount_modules': state.stealth.force_mount_modules = value; break;
+                case 'ignored_modules': state.stealth.ignored_modules = value; break;
             }
         });
 
         state.globalMountMode = state.stealth.mount_mode || 'magic';
         state.moduleModes = parseModuleModes(state.stealth.module_mount_modes);
+        state.forceMountModules = parseModuleModes(state.stealth.force_mount_modules);
+        state.ignoredModules = parseModuleModes(state.stealth.ignored_modules);
 
         updateStealthUI();
         updateStatusUI();
@@ -721,40 +874,39 @@ async function saveStealth() {
             mount_delay: document.getElementById('mountDelay').value,
             parallel_mount: document.getElementById('parallelMount').checked,
             mount_mode: document.getElementById('globalMountMode')?.value || 'magic',
-            module_mount_modes: JSON.stringify(state.moduleModes)
+            module_mount_modes: JSON.stringify(state.moduleModes),
+            force_mount_modules: JSON.stringify(state.forceMountModules),
+            ignored_modules: JSON.stringify(state.ignoredModules)
         };
 
-        const lines = stdout.split('\n');
-        const newLines = [];
-        let foundSection = false;
-        
-        lines.forEach(line => {
-            if (line.includes('Stealth Settings') || line.includes('Mount Mode Settings')) {
-                foundSection = true;
-            }
-            if (!foundSection) {
-                newLines.push(line);
-            }
-        });
+        const lines = [
+            '# Magic Mount Metaverse Extended Config v3.4',
+            '# Author: GitHub@FHYUYO',
+            '',
+            '# Stealth Settings',
+            'stealth_mode=' + stealthSettings.stealth_mode,
+            'randomize_id=' + stealthSettings.randomize_id,
+            'hide_mount_logs=' + stealthSettings.hide_mount_logs,
+            'hide_from_list=' + stealthSettings.hide_from_list,
+            '',
+            '# Mount Mode Settings',
+            'mount_mode=' + stealthSettings.mount_mode,
+            'module_mount_modes=' + stealthSettings.module_mount_modes,
+            '',
+            '# Force Mount Settings',
+            'force_mount_modules=' + stealthSettings.force_mount_modules,
+            '',
+            '# Custom Ignore Settings',
+            'ignored_modules=' + stealthSettings.ignored_modules,
+            '',
+            '# Performance Settings',
+            'optimization_level=' + stealthSettings.optimization_level,
+            'mount_delay=' + stealthSettings.mount_delay,
+            'parallel_mount=' + stealthSettings.parallel_mount
+        ];
 
-        newLines.push('');
-        newLines.push('# ====== Stealth Settings (v3.0) ======');
-        newLines.push(`stealth_mode=${stealthSettings.stealth_mode}`);
-        newLines.push(`randomize_id=${stealthSettings.randomize_id}`);
-        newLines.push(`hide_mount_logs=${stealthSettings.hide_mount_logs}`);
-        newLines.push(`hide_from_list=${stealthSettings.hide_from_list}`);
-        newLines.push('');
-        newLines.push('# ====== Mount Mode Settings ======');
-        newLines.push(`mount_mode=${stealthSettings.mount_mode}`);
-        newLines.push(`module_mount_modes=${stealthSettings.module_mount_modes}`);
-        newLines.push('');
-        newLines.push('# ====== Performance Settings ======');
-        newLines.push(`optimization_level=${stealthSettings.optimization_level}`);
-        newLines.push(`mount_delay=${stealthSettings.mount_delay}`);
-        newLines.push(`parallel_mount=${stealthSettings.parallel_mount}`);
-
-        const content = newLines.join('\n').replace(/'/g, "'\\''");
-        const cmd = `printf '%s\n' '${content}' > '${EXTENDED_CONFIG_PATH}'`;
+        const content = lines.join('\n');
+        const cmd = `echo '${content.replace(/'/g, "'\\''")}' > '${EXTENDED_CONFIG_PATH}'`;
         
         await exec(cmd);
         state.stealth = { ...state.stealth, ...stealthSettings };
@@ -779,57 +931,62 @@ async function loadModules() {
         loadingEl.style.display = 'flex';
         emptyEl.style.display = 'none';
         
+        // Remove old cards
         Array.from(listEl.children).forEach(child => {
             if (child !== loadingEl && child !== emptyEl) {
                 child.remove();
             }
         });
-
-        const moduleDir = state.config.module_dir || MODULE_DIR;
-        pathEl.textContent = `${t('modules.path')}: ${moduleDir}`;
-
+        
         const script = `
-            MOD_DIR="${moduleDir}"
-            if [ ! -d "$MOD_DIR" ]; then
-                exit 0
-            fi
-            
-            for m in "$MOD_DIR"/*; do
-                [ -d "$m" ] || continue
-                [ -d "$m/system" ] || continue
+            MOD_DIR="${MODULE_DIR}"
+            for mod in "$MOD_DIR"/*; do
+                [ -d "$mod" ] || continue
+                MOD_NAME=$(basename "$mod")
                 
-                MOD_NAME=$(basename "$m")
+                # Skip self module
+                [ "$MOD_NAME" = "Magic-Mount-Metaverse" ] && continue
                 
-                PROP_FILE="$m/module.prop"
+                # Read module.prop
                 MOD_ID="$MOD_NAME"
                 MOD_VERSION=""
                 MOD_AUTHOR=""
                 MOD_DESC=""
-                MOD_META=""
+                MOD_META="0"
+                DISABLED="0"
+                SKIP="0"
+                IGNORE="0"
+                MOUNTED="0"
+                HAS_SYSTEM="0"
                 
-                if [ -f "$PROP_FILE" ]; then
-                    MOD_ID=$(grep -E "^id=" "$PROP_FILE" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' \r\n')
-                    MOD_VERSION=$(grep -E "^version=" "$PROP_FILE" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' \r\n')
-                    MOD_AUTHOR=$(grep -E "^author=" "$PROP_FILE" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' \r\n')
-                    MOD_DESC=$(grep -E "^description=" "$PROP_FILE" 2>/dev/null | head -1 | cut -d'=' -f2- | tr -d ' \r\n')
-                    MOD_META=$(grep -E "^metamodule=" "$PROP_FILE" 2>/dev/null | head -1 | cut -d'=' -f2 | tr -d ' \r\n')
+                if [ -f "$mod/module.prop" ]; then
+                    while IFS='=' read -r key value; do
+                        case "$key" in
+                            id) MOD_ID="$value" ;;
+                            version) MOD_VERSION="$value" ;;
+                            author) MOD_AUTHOR="$value" ;;
+                            description) MOD_DESC="$value" ;;
+                        esac
+                    done < "$mod/module.prop"
                 fi
                 
-                [ -z "$MOD_ID" ] && MOD_ID="$MOD_NAME"
+                # Check flags
+                [ -f "$mod/disable" ] || [ -f "$mod/remove" ] && DISABLED="1"
+                [ -f "$mod/skip_mount" ] && SKIP="1"
+                [ -f "$mod/ignore" ] && IGNORE="1"
+                # Check for all supported partitions (system, vendor, odm, etc.)
+                HAS_SYSTEM="0"
+                for part in system vendor odm my_product system_ext product vendor_dlkm odm_dlkm system_dlkm; do
+                    [ -d "$mod/$part" ] && HAS_SYSTEM="1" && break
+                done
                 
-                DISABLED=0
-                SKIP=0
-                [ -e "$m/disable" ] || [ -e "$m/remove" ] && DISABLED=1
-                [ -e "$m/skip_mount" ] && SKIP=1
+                # Check if metamodule
+                [ -f "$mod/metamodule" ] || [ -d "$mod/system/metamodule" ] && MOD_META="1"
                 
-                MOUNTED=0
-                if mount | grep -q "$m/system"; then
-                    MOUNTED=1
-                fi
-                
-                printf '%s|%s|%s|%s|%s|%s|%s|%s|%s\\n' \
+                # Output format: name|id|version|author|desc|meta|disabled|skip|ignore|hasSystem
+                printf '%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\\n' \
                     "$MOD_NAME" "$MOD_ID" "$MOD_VERSION" "$MOD_AUTHOR" "$MOD_DESC" \
-                    "$MOD_META" "$DISABLED" "$SKIP" "$MOUNTED"
+                    "$MOD_META" "$DISABLED" "$SKIP" "$IGNORE" "$HAS_SYSTEM"
             done
         `;
 
@@ -847,7 +1004,9 @@ async function loadModules() {
                     isMetamodule: parts[5] === '1',
                     disabled: parts[6] === '1',
                     skip: parts[7] === '1',
-                    isMounted: parts[8] === '1'
+                    ignored: parts[8] === '1',
+                    hasSystem: parts[9] === '1',
+                    isHidden: parts[9] !== '1'
                 };
             });
 
@@ -857,14 +1016,14 @@ async function loadModules() {
             state.moduleDetails[m.id] = m;
         });
         
-        document.getElementById('moduleCount').textContent = modules.length;
-
+        updateModuleCount();
         loadingEl.style.display = 'none';
         
-        if (modules.length === 0) {
+        const visibleModules = getVisibleModules();
+        if (visibleModules.length === 0) {
             emptyEl.style.display = 'flex';
         } else {
-            renderModules(modules);
+            renderModules(visibleModules);
         }
 
     } catch (e) {
@@ -875,8 +1034,80 @@ async function loadModules() {
     }
 }
 
+function getVisibleModules() {
+    let modules = [...state.modules];
+    
+    // Filter by hidden status
+    if (!state.showHidden) {
+        modules = modules.filter(m => m.hasSystem);
+    }
+    
+    return modules;
+}
+
+function updateModuleCount() {
+    const visibleModules = getVisibleModules();
+    const totalModules = state.modules.length;
+    
+    const countText = state.showHidden 
+        ? `${visibleModules.length}/${totalModules}`
+        : `${visibleModules.length}`;
+    
+    document.getElementById('moduleCount').textContent = countText;
+}
+
 function getModuleMountMode(moduleName) {
     return state.moduleModes[moduleName] || 'global';
+}
+
+function isForceMount(moduleName) {
+    return state.forceMountModules[moduleName] === true;
+}
+
+function isCustomIgnored(moduleName) {
+    return state.ignoredModules[moduleName] === 'ignore';
+}
+
+async function toggleCustomIgnore(moduleId) {
+    try {
+        if (state.ignoredModules[moduleId] === 'ignore') {
+            delete state.ignoredModules[moduleId];
+        } else {
+            state.ignoredModules[moduleId] = 'ignore';
+        }
+        
+        await saveModuleSettings('ignored_modules', state.ignoredModules);
+        loadModules();
+        showToast(t('toast.ignoreSaved'), 'success');
+        
+    } catch (e) {
+        console.error('Save ignore error:', e);
+        showToast(t('toast.saveError'), 'error');
+    }
+}
+
+async function saveModuleSettings(settingName, data) {
+    const { stdout } = await exec(`cat "${EXTENDED_CONFIG_PATH}" 2>/dev/null || echo ""`);
+    let lines = stdout.split('\n');
+    
+    let found = false;
+    const newLines = [];
+    lines.forEach(line => {
+        if (line.startsWith(settingName + '=')) {
+            newLines.push(settingName + '=' + JSON.stringify(data));
+            found = true;
+        } else {
+            newLines.push(line);
+        }
+    });
+    
+    if (!found) {
+        newLines.push(settingName + '=' + JSON.stringify(data));
+    }
+    
+    const content = newLines.join('\n');
+    const cmd = `echo '${content.replace(/'/g, "'\\''")}' > '${EXTENDED_CONFIG_PATH}'`;
+    await exec(cmd);
 }
 
 function renderModules(modules) {
@@ -885,14 +1116,107 @@ function renderModules(modules) {
     modules.forEach((mod, index) => {
         const item = document.createElement('div');
         item.className = 'module-card';
+        if (mod.isHidden) item.classList.add('hidden-type');
         item.dataset.moduleId = mod.id;
         item.style.animationDelay = `${index * 0.05}s`;
         
         const mountMode = getModuleMountMode(mod.id);
         const modeClass = mountMode === 'overlayfs' ? 'overlayfs' : (mountMode === 'magic' ? 'magic' : 'global');
-        const modeLabel = mountMode === 'overlayfs' ? t('modules.overlayfs') : (mountMode === 'magic' ? t('modules.magic') : 'Global');
-        const statusClass = mod.skip ? 'unmounted' : (mod.isMounted ? 'mounted' : 'mounted');
-        const statusText = mod.skip ? t('modules.unmounted') : (mod.disabled ? t('modules.unmounted') : t('modules.mounted'));
+        const modeLabel = mountMode === 'overlayfs' ? t('modules.overlayfs') : (mountMode === 'magic' ? t('modules.magic') : t('modules.defaultMode'));
+        
+        const isForced = isForceMount(mod.id);
+        const isIgnored = isCustomIgnored(mod.id);
+        
+        // Determine status
+        let statusClass = 'mounted';
+        let statusText = t('modules.mounted');
+        
+        if (isIgnored) {
+            statusClass = 'custom-ignored';
+            statusText = t('modules.customIgnored');
+        } else if (mod.ignored && !isForced) {
+            statusClass = 'ignored';
+            statusText = t('modules.ignored');
+        } else if (mod.ignored && isForced) {
+            statusClass = 'forced';
+            statusText = t('modules.forceMounted');
+        } else if (mod.skip && !isForced) {
+            statusClass = 'unmounted';
+            statusText = t('modules.unmounted');
+        } else if (mod.disabled) {
+            statusClass = 'unmounted';
+            statusText = t('modules.unmounted');
+        }
+        
+        let extraOptions = '';
+        
+        // Hidden module hint
+        if (mod.isHidden && state.showHidden) {
+            extraOptions += `
+                <div style="margin-bottom:12px;padding:8px 12px;background:var(--md3-surface-variant);border-radius:8px;font-size:12px;color:var(--md3-on-surface-variant);">
+                    <strong>${t('modules.hiddenModule')}</strong>: ${t('modules.hiddenModuleHint')}
+                </div>
+            `;
+        }
+        
+        // Native ignore marker (if exists)
+        if (mod.ignored) {
+            extraOptions += `
+                <div class="force-mount-section">
+                    <div class="ignore-notice">
+                        <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                        <span>${t('modules.ignoreMarker')}</span>
+                    </div>
+                    <button class="force-mount-btn ${isForced ? 'active' : ''}" 
+                            onclick="toggleForceMount('${escapeHtml(mod.id)}')">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                        </svg>
+                        ${isForced ? t('modules.unforceMount') : t('modules.forceMount')}
+                    </button>
+                    ${isForced ? `<div class="force-hint">${t('modules.ignoreHint')}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        // Custom Ignore Option (always shown for modules with system dir)
+        if (mod.hasSystem) {
+            extraOptions += `
+                <div class="ignore-option">
+                    <div class="ignore-option-header">
+                        <span class="ignore-option-label">${t('modules.customIgnore')}</span>
+                        <label class="module-toggle-switch">
+                            <input type="checkbox" ${isIgnored ? 'checked' : ''} 
+                                   onchange="toggleCustomIgnore('${escapeHtml(mod.id)}')">
+                            <span class="module-toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="ignore-option-hint">${t('modules.customIgnoreDesc')}</div>
+                </div>
+            `;
+        }
+        
+        // Force Mount Option (only for non-ignored modules)
+        if (!mod.ignored) {
+            extraOptions += `
+                <div class="force-mount-section" style="margin-top:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            <div style="font-size:13px;font-weight:500;">${t('modules.forceMount')}</div>
+                            <div style="font-size:11px;color:var(--md3-on-surface-variant);margin-top:2px;">${t('modules.forceMountDesc')}</div>
+                        </div>
+                        <button class="force-mount-btn ${isForced ? 'active' : ''}" 
+                                style="padding:8px 16px;font-size:13px;"
+                                onclick="toggleForceMount('${escapeHtml(mod.id)}')">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                            </svg>
+                            ${isForced ? t('modules.unforceMount') : t('modules.forceMount')}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
         
         item.innerHTML = `
             <div class="module-card-header" onclick="toggleModuleCard('${escapeHtml(mod.id)}')">
@@ -918,6 +1242,9 @@ function renderModules(modules) {
             <div class="module-card-body">
                 <div class="module-card-desc">${escapeHtml(mod.description) || '-'}</div>
                 ${mod.author ? `<div style="font-size:12px;color:var(--md3-on-surface-variant);margin-bottom:12px;">Author: ${escapeHtml(mod.author)}</div>` : ''}
+                
+                ${extraOptions}
+                
                 <div class="module-card-section">
                     <div class="module-card-section-title">${t('modules.mountMode')}</div>
                     <div class="module-card-strategy">
@@ -960,44 +1287,38 @@ function toggleModuleCard(moduleId) {
 }
 
 async function setModuleMode(moduleId, mode) {
-    state.moduleModes[moduleId] = mode;
+    // If clicking the same mode that's already selected, toggle it off (back to global)
+    if (state.moduleModes[moduleId] === mode) {
+        delete state.moduleModes[moduleId];
+        mode = 'global';
+    } else {
+        state.moduleModes[moduleId] = mode;
+    }
     
     try {
-        const { stdout } = await exec(`cat "${EXTENDED_CONFIG_PATH}" 2>/dev/null || echo ""`);
-        let lines = stdout.split('\n');
-        
-        let found = false;
-        const newLines = [];
-        lines.forEach(line => {
-            if (line.startsWith('module_mount_modes=')) {
-                newLines.push(`module_mount_modes=${JSON.stringify(state.moduleModes)}`);
-                found = true;
-            } else {
-                newLines.push(line);
-            }
-        });
-        
-        if (!found) {
-            newLines.push(`module_mount_modes=${JSON.stringify(state.moduleModes)}`);
-        }
-        
-        const content = newLines.join('\n').replace(/'/g, "'\\''");
-        await exec(`printf '%s\n' '${content}' > '${EXTENDED_CONFIG_PATH}'`);
+        await saveModuleSettings('module_mount_modes', state.moduleModes);
         
         const card = document.querySelector(`.module-card[data-module-id="${moduleId}"]`);
         if (card) {
             const btns = card.querySelectorAll('.strategy-btn');
             btns.forEach(btn => {
                 btn.classList.remove('selected');
-                if (btn.onclick.toString().includes(`'${mode}'`)) {
-                    btn.classList.add('selected');
+                // Check if this button matches the current mode
+                const btnMode = btn.getAttribute('onclick')?.match(/setModuleMode\([^,]+,\s*'([^']+)'/)?.[1];
+                if (btnMode === mode || (mode === 'global' && !btnMode)) {
+                    // For global mode, deselect both buttons
+                    if (mode === 'global') {
+                        btn.classList.remove('selected');
+                    } else {
+                        btn.classList.add('selected');
+                    }
                 }
             });
             
             const indicator = card.querySelector('.mode-indicator');
             if (indicator) {
-                indicator.className = `mode-indicator ${mode}`;
-                indicator.textContent = mode === 'overlayfs' ? t('modules.overlayfs') : t('modules.magic');
+                indicator.className = `mode-indicator ${mode === 'global' ? 'global' : mode}`;
+                indicator.textContent = mode === 'overlayfs' ? t('modules.overlayfs') : (mode === 'magic' ? t('modules.magic') : t('modules.defaultMode'));
             }
         }
         
@@ -1009,43 +1330,75 @@ async function setModuleMode(moduleId, mode) {
     }
 }
 
-// ===== Log Operations =====
-async function loadLogs() {
-    const contentEl = document.getElementById('logContent');
-    const viewEl = document.getElementById('logView');
-    
+async function toggleForceMount(moduleId) {
     try {
-        contentEl.textContent = t('logs.loading');
-        
-        const baseLogFile = '/data/adb/magic_mount/mm.log';
-        let logFile;
-        
-        if (state.currentLog === 'old') {
-            logFile = '/data/adb/magic_mount/mm_old.log';
+        if (state.forceMountModules[moduleId] === true) {
+            delete state.forceMountModules[moduleId];
         } else {
-            logFile = baseLogFile;
+            state.forceMountModules[moduleId] = true;
         }
         
-        const { stdout } = await exec(`
-            if [ -f "${logFile}" ]; then
-                cat "${logFile}"
-            elif [ -f "${logFile}.old" ]; then
-                cat "${logFile}.old"
-            else
-                echo ""
-            fi
-        `);
-        
-        if (!stdout.trim()) {
-            contentEl.textContent = t('logs.empty');
-        } else {
-            contentEl.textContent = stdout;
-            viewEl.scrollTop = viewEl.scrollHeight;
-        }
+        await saveModuleSettings('force_mount_modules', state.forceMountModules);
+        loadModules();
+        showToast(t('toast.forceSaved'), 'success');
         
     } catch (e) {
-        console.error('Load logs error:', e);
-        contentEl.textContent = t('logs.empty');
+        console.error('Save force mount error:', e);
+        showToast(t('toast.saveError'), 'error');
+    }
+}
+
+// ===== Show/Hide Hidden Modules =====
+function toggleShowHidden() {
+    state.showHidden = !state.showHidden;
+    
+    const btn = document.getElementById('showHiddenBtn');
+    if (btn) {
+        if (state.showHidden) {
+            btn.classList.add('active');
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+                ${t('modules.hideHidden')}
+            `;
+        } else {
+            btn.classList.remove('active');
+            btn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="currentColor" d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+                </svg>
+                ${t('modules.showHidden')}
+            `;
+        }
+    }
+    
+    updateModuleCount();
+    loadModules();
+}
+
+// ===== System Info =====
+async function updateSystemInfo() {
+    try {
+        // Get Android version
+        const androidScript = `getprop ro.build.version.release 2>/dev/null || echo "-"`;
+        const { stdout: android } = await exec(androidScript);
+        document.getElementById('androidVersion').textContent = android.trim() || '-';
+        
+        // Get Kernel version
+        const kernelScript = `uname -r 2>/dev/null || uname -v 2>/dev/null || echo "-"`;
+        const { stdout: kernel } = await exec(kernelScript);
+        const kernelText = kernel.trim();
+        // Shorten kernel version if too long
+        document.getElementById('kernelVersion').textContent = kernelText.length > 25 ? kernelText.substring(0, 22) + '...' : (kernelText || '-');
+        
+        // Get Device model
+        const deviceScript = `getprop ro.product.model 2>/dev/null || getprop ro.product.device 2>/dev/null || echo "-"`;
+        const { stdout: device } = await exec(deviceScript);
+        document.getElementById('deviceModel').textContent = device.trim() || '-';
+        
+    } catch (e) {
+        console.error('Update system info error:', e);
     }
 }
 
@@ -1070,34 +1423,6 @@ function updateStatusUI() {
     }
 }
 
-// ===== Metrics =====
-async function updateMetrics() {
-    if (!state.showMetrics) return;
-    
-    try {
-        const cpuScript = `cat /proc/stat | grep 'cpu ' | awk '{usage=($2+$4)*100/($2+$4+$5)} END {printf "%.0f", usage}'`;
-        const { stdout: cpu } = await exec(cpuScript);
-        const cpuVal = parseInt(cpu) || 0;
-        document.getElementById('cpuBar').style.width = `${cpuVal}%`;
-        document.getElementById('cpuValue').textContent = `${cpuVal}%`;
-
-        const memScript = `cat /proc/meminfo | awk '/MemTotal/{t=$2} /MemAvailable/{a=$2} END {printf "%.0f", (t-a)*100/t}'`;
-        const { stdout: mem } = await exec(memScript);
-        const memVal = parseInt(mem) || 0;
-        document.getElementById('memBar').style.width = `${memVal}%`;
-        document.getElementById('memValue').textContent = `${memVal}%`;
-
-        const diskScript = `df /data | tail -1 | awk '{print $5}' | tr -d '%'`;
-        const { stdout: disk } = await exec(diskScript);
-        const diskVal = parseInt(disk) || 0;
-        document.getElementById('diskBar').style.width = `${diskVal}%`;
-        document.getElementById('diskValue').textContent = `${diskVal}%`;
-        
-    } catch (e) {
-        // Silently fail
-    }
-}
-
 // ===== Tab Navigation =====
 function initTabs() {
     const navTabs = document.querySelectorAll('.nav-tab');
@@ -1113,8 +1438,6 @@ function initTabs() {
             
             if (tabName === 'modules') {
                 loadModules();
-            } else if (tabName === 'logs') {
-                loadLogs();
             }
         });
     });
@@ -1126,16 +1449,8 @@ function initEventListeners() {
     document.getElementById('saveConfig')?.addEventListener('click', saveConfig);
     document.getElementById('saveStealth')?.addEventListener('click', saveStealth);
     document.getElementById('reloadModules')?.addEventListener('click', loadModules);
-    document.getElementById('refreshLogs')?.addEventListener('click', loadLogs);
-    
-    document.querySelectorAll('.log-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            state.currentLog = tab.dataset.log;
-            loadLogs();
-        });
-    });
+    document.getElementById('showHiddenBtn')?.addEventListener('click', toggleShowHidden);
+    document.getElementById('partitionSelect')?.addEventListener('click', showPartitionSelector);
 }
 
 // ===== Initialization =====
@@ -1152,21 +1467,21 @@ async function init() {
     updateI18n();
     initHelpIcons();
     
-    if (state.showMetrics) {
-        updateMetrics();
-        setInterval(updateMetrics, 1000);
-    }
+    // Update system info
+    updateSystemInfo();
+    setInterval(updateSystemInfo, 5000);
     
-    setInterval(() => {
-        const moduleCountEl = document.getElementById('moduleCount');
-        if (moduleCountEl) {
-            moduleCountEl.textContent = state.modules.length;
-        }
-    }, 1000);
+    setInterval(updateModuleCount, 1000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
 
-// 导出给全局使用
+// Export to global
 window.toggleModuleCard = toggleModuleCard;
 window.setModuleMode = setModuleMode;
+window.toggleForceMount = toggleForceMount;
+window.toggleCustomIgnore = toggleCustomIgnore;
+window.togglePartition = togglePartition;
+window.selectAllPartitions = selectAllPartitions;
+window.deselectAllPartitions = deselectAllPartitions;
+window.showPartitionSelector = showPartitionSelector;

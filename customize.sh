@@ -1,10 +1,14 @@
 #!/system/bin/sh
 ############################################
-# Magic Mount Metaverse v3.0 Installer
+# Magic Mount Metaverse v3.4.1 Installer
 # Author: GitHub@FHYUYO/酷安@枫原羽悠
+#
+# v3.4.1 Changes:
+#   - Fixed volume key mount mode selection
+#   - Volume UP = Magic mode
+#   - Volume DOWN = OverlayFS mode
+#   - Improved key detection reliability
 ############################################
-
-am start -a android.intent.action.VIEW -d https://qm.qq.com/q/iFJs3xVgj0 >/dev/null 2>&1
 
 SKIPUNZIP=1
 MODULE_ID="Magic-Mount-Metaverse"
@@ -13,7 +17,7 @@ METAMODULE_LINK="/data/adb/metamodule"
 
 ui_print ""
 ui_print "╔═══════════════════════════════════════╗"
-ui_print "║  Magic Mount Metaverse v3.0 Installer  ║"
+ui_print "║  Magic Mount Metaverse v3.4.1        ║"
 ui_print "╚═══════════════════════════════════════╝"
 ui_print ""
 
@@ -53,6 +57,78 @@ case "$ABI" in
         abort "[!] Unsupported architecture: $ABI"
         ;;
 esac
+
+# ===== 音量键挂载模式选择 =====
+ui_print ""
+ui_print "╔═══════════════════════════════════════╗"
+ui_print "║     Select Mount Mode (音量键选择)     ║"
+ui_print "╠═══════════════════════════════════════╣"
+ui_print "║  音量上键(+)= Magic 挂载模式          ║"
+ui_print "║  音量下键(-)= OverlayFS 挂载模式       ║"
+ui_print "║  5秒后默认选择 Magic 模式             ║"
+ui_print "╚═══════════════════════════════════════╝"
+ui_print ""
+
+SELECTED_MODE="magic"
+
+# 等待音量键输入
+KEY_TIMEOUT=10
+KEY_PRESSED=""
+START_TIME=$(date +%s)
+
+while true; do
+    CURRENT_TIME=$(date +%s)
+    ELAPSED=$((CURRENT_TIME - START_TIME))
+    
+    if [ $ELAPSED -ge $KEY_TIMEOUT ]; then
+        break
+    fi
+    
+    # 使用timeout确保getevent不会永久阻塞，并使用-l参数获取可读的key名称
+    KEY_EVENT=$(timeout 0.3 getevent -l 2>/dev/null)
+    
+    # 检查音量上键
+    if echo "$KEY_EVENT" | grep -q "KEY_VOLUMEUP"; then
+        SELECTED_MODE="magic"
+        ui_print "[+] Detected: Volume Up Key"
+        break
+    fi
+    
+    # 检查音量下键
+    if echo "$KEY_EVENT" | grep -q "KEY_VOLUMEDOWN"; then
+        SELECTED_MODE="overlayfs"
+        ui_print "[+] Detected: Volume Down Key"
+        break
+    fi
+    
+    # 剩余时间提示
+    REMAINING=$((KEY_TIMEOUT - ELAPSED))
+    ui_print "\r[*] Waiting... ($REMAINING s left)    "
+    sleep 0.3
+done
+
+# 显示选择的模式
+ui_print ""
+case "$SELECTED_MODE" in
+    magic)
+        ui_print "[+] Selected: Magic Mount Mode"
+        ;;
+    overlayfs)
+        ui_print "[+] Selected: OverlayFS Mount Mode"
+        ;;
+esac
+
+# 保存用户选择的模式到配置
+mkdir -p "$MODULE_DATA_DIR"
+if [ -f "${TMPDIR}/mm_extended.conf" ]; then
+    cp "${TMPDIR}/mm_extended.conf" "$MODULE_DATA_DIR/"
+    # 更新配置文件中的挂载模式
+    if grep -q "^mount_mode=" "$MODULE_DATA_DIR/mm_extended.conf" 2>/dev/null; then
+        sed -i "s/^mount_mode=.*/mount_mode=\"$SELECTED_MODE\"/" "$MODULE_DATA_DIR/mm_extended.conf"
+    else
+        echo "mount_mode=\"$SELECTED_MODE\"" >> "$MODULE_DATA_DIR/mm_extended.conf"
+    fi
+fi
 
 # 创建模块目录
 mkdir -p "$MODPATH"
@@ -107,7 +183,12 @@ else
     ui_print "    [!] WebUI not found"
 fi
 
-# 创建数据目录
+# 安装二进制文件目录
+if [ -d "${TMPDIR}/bin" ]; then
+    cp -r "${TMPDIR}/bin" "$MODPATH/"
+fi
+
+# 创建数据目录（确保已存在）
 mkdir -p "$MODULE_DATA_DIR"
 
 # 安装运行时配置
@@ -131,10 +212,10 @@ fi
 # 完成
 ui_print ""
 ui_print "═══════════════════════════════════════════"
-ui_print "   Magic Mount Metaverse v2.3 Installed"
+ui_print "   Magic Mount Metaverse v3.4.1 Installed"
 ui_print "═══════════════════════════════════════════"
 ui_print "   Arch: $ABI"
-ui_print "   Mode: Magic + OverlayFS"
+ui_print "   Mode: $SELECTED_MODE"
 ui_print "   Feature: Per-module mount modes"
 ui_print "═══════════════════════════════════════════"
 ui_print ""

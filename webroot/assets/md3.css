@@ -360,7 +360,7 @@ body {
     overflow: hidden;
 }
 
-.lang-dropdown.active {
+.lang-dropdown.show {
     display: flex;
     animation: fadeIn 0.2s ease;
 }

@@ -8,6 +8,428 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Magic Mount</title>
     <link rel="stylesheet" href="./assets/md3.css">
+    <style>
+        /* Partition Selector Styles */
+        .partition-selector {
+            padding: 8px;
+        }
+        .partition-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .partition-chip {
+            padding: 8px 16px;
+            border-radius: 16px;
+            border: 1px solid var(--md3-outline, #79747e);
+            background: transparent;
+            color: var(--md3-on-surface, #1d1b20);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+        .partition-chip.selected {
+            background: var(--md3-secondary-container, #e8def8);
+            border-color: var(--md3-secondary, #6750a4);
+            color: var(--md3-on-secondary-container, #1d192b);
+        }
+        .partition-chip:hover {
+            background: var(--md3-surface-variant, #e7e0ec);
+        }
+        .partition-chip.selected:hover {
+            background: var(--md3-secondary, #7f67be);
+            color: white;
+        }
+        .md3-btn-secondary {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--md3-outline, #79747e);
+            background: transparent;
+            color: var(--md3-primary, #6750a4);
+            cursor: pointer;
+            margin-right: 8px;
+            font-size: 13px;
+        }
+        .md3-btn-secondary:hover {
+            background: var(--md3-surface-variant, #e7e0ec);
+        }
+        
+        /* Force Mount Styles */
+        .force-mount-section {
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--md3-surface-variant, #e7e0ec);
+            border-radius: 12px;
+        }
+        .ignore-notice {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--md3-error, #b3261e);
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+        .force-mount-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: none;
+            background: var(--md3-primary, #6750a4);
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .force-mount-btn:hover {
+            background: var(--md3-primary-container, #eaddff);
+            color: var(--md3-on-primary-container, #21005d);
+        }
+        .force-mount-btn.active {
+            background: var(--md3-tertiary, #7d5260);
+            color: white;
+        }
+        .force-mount-btn.active:hover {
+            background: var(--md3-tertiary-container, #633b48);
+        }
+        .force-hint {
+            font-size: 11px;
+            color: var(--md3-on-surface-variant, #49454f);
+            margin-top: 8px;
+            font-style: italic;
+        }
+        
+        /* Module Badge Styles */
+        .module-card-badge.ignored {
+            background: var(--md3-error-container, #f9dedc);
+            color: var(--md3-on-error-container, #410e0b);
+        }
+        .module-card-badge.forced {
+            background: var(--md3-tertiary-container, #ffd8e4);
+            color: var(--md3-on-tertiary-container, #31111d);
+        }
+        .module-card-badge.custom-ignored {
+            background: var(--md3-surface-variant, #e7e0ec);
+            color: var(--md3-on-surface-variant, #49454f);
+        }
+        
+        /* Module Header Enhancements */
+        .module-header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        /* Partition Display */
+        .partition-display {
+            font-size: 12px;
+            color: var(--md3-on-surface-variant, #49454f);
+            margin-top: 4px;
+        }
+        
+        /* Partition Button in Config */
+        .partition-select-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--md3-outline, #79747e);
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            color: var(--md3-on-surface, #1d1b20);
+            transition: all 0.2s;
+        }
+        .partition-select-btn:hover {
+            background: var(--md3-surface-variant, #e7e0ec);
+        }
+        .partition-select-btn .label {
+            flex: 1;
+        }
+        .partition-select-btn .chevron {
+            transition: transform 0.2s;
+        }
+        .partition-select-btn.open .chevron {
+            transform: rotate(180deg);
+        }
+        
+        /* v3.4 Ignore Option Styles */
+        .ignore-option {
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: rgba(179, 38, 30, 0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(179, 38, 30, 0.3);
+        }
+        .ignore-option-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+        .ignore-option-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--md3-error, #b3261e);
+        }
+        .ignore-option-hint {
+            font-size: 11px;
+            color: var(--md3-on-surface-variant, #49454f);
+        }
+        
+        /* Module Card Toggle Switch */
+        .module-toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+        .module-toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .module-toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--md3-surface-variant, #e7e0ec);
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+        .module-toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--md3-on-surface-variant, #49454f);
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        .module-toggle-switch input:checked + .module-toggle-slider {
+            background-color: var(--md3-error, #b3261e);
+        }
+        .module-toggle-switch input:checked + .module-toggle-slider:before {
+            transform: translateX(20px);
+            background-color: white;
+        }
+        
+        /* Show Hidden Modules Button */
+        .show-hidden-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            border: 1px solid var(--md3-outline, #79747e);
+            background: transparent;
+            color: var(--md3-on-surface, #1d1b20);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .show-hidden-btn:hover {
+            background: var(--md3-surface-variant, #e7e0ec);
+        }
+        .show-hidden-btn.active {
+            background: var(--md3-tertiary-container, #ffd8e4);
+            border-color: var(--md3-tertiary, #7d5260);
+        }
+        
+        /* Hidden module card style */
+        .module-card.hidden-type {
+            opacity: 0.7;
+            border-left: 3px solid var(--md3-outline, #79747e);
+        }
+        .module-card.hidden-type .module-card-header {
+            background: var(--md3-surface-variant, #e7e0ec);
+        }
+        
+        /* Language Dropdown Fix */
+        .lang-dropdown {
+            position: fixed;
+            top: 60px;
+            right: 16px;
+            background: var(--md3-surface-container-lowest);
+            border-radius: 12px;
+            box-shadow: var(--md3-elevation-3);
+            overflow: hidden;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+        }
+        .lang-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .lang-option {
+            display: block;
+            width: 100%;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--md3-on-surface);
+            font-size: 14px;
+            text-align: left;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .lang-option:hover {
+            background: var(--md3-surface-variant);
+        }
+        .lang-option.active {
+            background: var(--md3-secondary-container);
+            color: var(--md3-on-secondary-container);
+        }
+        
+        /* System Info Display */
+        .system-info-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--md3-surface-container);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .system-info-item {
+            flex: 1;
+            min-width: 100px;
+        }
+        .system-info-label {
+            font-size: 11px;
+            color: var(--md3-on-surface-variant);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .system-info-value {
+            font-size: 13px;
+            color: var(--md3-on-surface);
+            font-weight: 500;
+            word-break: break-all;
+        }
+        
+        /* About Page Styles */
+        .about-card {
+            padding: 16px;
+        }
+        .about-section {
+            margin-bottom: 24px;
+        }
+        .about-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--md3-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .about-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: var(--md3-surface-variant);
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--md3-on-surface);
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        .about-link:hover {
+            background: var(--md3-surface-container-high);
+        }
+        .about-link-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--md3-primary-container);
+            color: var(--md3-on-primary-container);
+        }
+        .about-link-content {
+            flex: 1;
+        }
+        .about-link-title {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .about-link-desc {
+            font-size: 12px;
+            color: var(--md3-on-surface-variant);
+        }
+        .about-link-arrow {
+            color: var(--md3-on-surface-variant);
+        }
+        .donate-qrcode {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 12px;
+            margin: 8px auto;
+            display: block;
+        }
+        .donate-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--md3-on-surface);
+        }
+        .tutorial-list {
+            list-style: none;
+            padding: 0;
+        }
+        .tutorial-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--md3-outline-variant);
+        }
+        .tutorial-item:last-child {
+            border-bottom: none;
+        }
+        .tutorial-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--md3-primary-container);
+            color: var(--md3-on-primary-container);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .tutorial-content {
+            flex: 1;
+        }
+        .tutorial-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        .tutorial-desc {
+            font-size: 12px;
+            color: var(--md3-on-surface-variant);
+        }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -39,109 +461,62 @@
             </div>
         </header>
 
-        <!-- Language Dropdown -->
+        <!-- Language Dropdown - Fixed -->
         <div class="lang-dropdown" id="langMenu">
+            <button class="lang-option active" data-lang="zh">中文</button>
             <button class="lang-option" data-lang="en">English</button>
-            <button class="lang-option" data-lang="zh">中文</button>
             <button class="lang-option" data-lang="ja">日本語</button>
         </div>
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Status Dashboard -->
-            <section class="status-section">
-                <div class="status-card">
-                    <div class="status-icon status-icon-mount">
-                        <svg viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                        </svg>
-                    </div>
-                    <div class="status-info">
-                        <div class="status-label" data-i18n="status.mount">Mount</div>
-                        <div class="status-value" id="mountStatus">Loading...</div>
-                    </div>
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label" data-i18n="status.mount">Mount</span>
+                    <span class="status-value" id="mountStatus">-</span>
                 </div>
-                <div class="status-card">
-                    <div class="status-icon status-icon-stealth">
-                        <svg viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                        </svg>
-                    </div>
-                    <div class="status-info">
-                        <div class="status-label" data-i18n="status.stealth">Stealth</div>
-                        <div class="status-value" id="stealthStatus">Disabled</div>
-                    </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="status.stealth">Stealth</span>
+                    <span class="status-value" id="stealthStatus">-</span>
                 </div>
-                <div class="status-card">
-                    <div class="status-icon status-icon-modules">
-                        <svg viewBox="0 0 24 24" width="24" height="24">
-                            <path fill="currentColor" d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/>
-                        </svg>
-                    </div>
-                    <div class="status-info">
-                        <div class="status-label" data-i18n="status.modules">Modules</div>
-                        <div class="status-value" id="moduleCount">0</div>
-                    </div>
+                <div class="status-item">
+                    <span class="status-label" data-i18n="status.modules">Modules</span>
+                    <span class="status-value"><span id="moduleCount">0</span></span>
                 </div>
-            </section>
+            </div>
 
-            <!-- Performance Metrics -->
-            <section class="metrics-section" id="metricsContainer">
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M9 2v4H7V2h2zm4 0v4h-2V2h2zm4 0v4h-2V2h2zM5 8v2H3V8h2zm12 0v2h-2V8h2zm4 0v2h-2V8h2zM5 12v2H3v-2h2zm12 0v2h-2v-2h2zm-6 4v2H7v-2h2zm4 0v2h-2v-2h2zm4 0v2h-2v-2h2zM5 16v2H3v-2h2zm12 0v2h-2v-2h2z"/>
-                        </svg>
-                        <span class="metric-title" data-i18n="metrics.cpu">CPU</span>
-                    </div>
-                    <div class="metric-bar">
-                        <div class="metric-fill" id="cpuBar" style="width: 0%"></div>
-                    </div>
-                    <div class="metric-value" id="cpuValue">0%</div>
+            <!-- System Info Bar - v3.4 Changed from Metrics -->
+            <div class="system-info-bar" id="systemInfoBar">
+                <div class="system-info-item">
+                    <div class="system-info-label" data-i18n="sysinfo.android">Android</div>
+                    <div class="system-info-value" id="androidVersion">-</div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/>
-                        </svg>
-                        <span class="metric-title" data-i18n="metrics.memory">Memory</span>
-                    </div>
-                    <div class="metric-bar">
-                        <div class="metric-fill memory" id="memBar" style="width: 0%"></div>
-                    </div>
-                    <div class="metric-value" id="memValue">0%</div>
+                <div class="system-info-item">
+                    <div class="system-info-label" data-i18n="sysinfo.kernel">Kernel</div>
+                    <div class="system-info-value" id="kernelVersion">-</div>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-header">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M2 20h20v-4H2v4zm2-3h2v2H4v-2zM2 4v4h20V4H2zm4 3H4V5h2v2zm-4 7h20v-4H2v4zm2-3h2v2H4v-2z"/>
-                        </svg>
-                        <span class="metric-title" data-i18n="metrics.disk">Disk</span>
-                    </div>
-                    <div class="metric-bar">
-                        <div class="metric-fill disk" id="diskBar" style="width: 0%"></div>
-                    </div>
-                    <div class="metric-value" id="diskValue">0%</div>
+                <div class="system-info-item">
+                    <div class="system-info-label" data-i18n="sysinfo.device">Device</div>
+                    <div class="system-info-value" id="deviceModel">-</div>
                 </div>
-            </section>
+            </div>
 
-            <!-- Tab Content -->
-            <div class="tab-content">
-                <!-- Config Tab -->
-                <div class="tab-panel active" id="configPanel">
-                    <div class="md3-card">
+            <!-- Config Tab -->
+            <div class="tab-panel active" id="configPanel">
+                <div class="md3_card">
+                    <div class="card-header">
                         <h2 class="card-title" data-i18n="config.title">Configuration</h2>
-                        
+                    </div>
+                    <div class="config-grid">
                         <div class="text-field">
                             <input type="text" id="moduleDir" placeholder=" ">
                             <label data-i18n="config.moduleDir">Module Directory</label>
                         </div>
-                        
                         <div class="text-field">
                             <input type="text" id="logFile" placeholder=" ">
                             <label data-i18n="config.logFile">Log File</label>
                         </div>
-                        
                         <div class="text-field">
                             <select id="mountSource">
                                 <option value="KSU">KernelSU</option>
@@ -149,7 +524,6 @@
                             </select>
                             <label data-i18n="config.mountSource">Mount Source</label>
                         </div>
-                        
                         <div class="toggle-field">
                             <span class="toggle-label" data-i18n="config.debug">Debug Mode</span>
                             <label class="switch">
@@ -157,7 +531,6 @@
                                 <span class="slider"></span>
                             </label>
                         </div>
-                        
                         <div class="toggle-field">
                             <span class="toggle-label" data-i18n="config.umount">Enable Unmount</span>
                             <label class="switch">
@@ -166,205 +539,284 @@
                             </label>
                         </div>
                         
-                        <div class="text-field">
-                            <input type="text" id="partitions" placeholder=" ">
-                            <label data-i18n="config.partitions">Extra Partitions</label>
-                        </div>
-                        
-                        <div class="card-actions">
-                            <button class="btn-filled" id="saveConfig">
+                        <!-- Partition Selection -->
+                        <div class="text-field" style="grid-column: 1 / -1;">
+                            <button class="partition-select-btn" id="partitionSelect">
                                 <svg viewBox="0 0 24 24" width="20" height="20">
-                                    <path fill="currentColor" d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                                    <path fill="currentColor" d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/>
                                 </svg>
-                                <span data-i18n="btn.save">Save</span>
+                                <span class="label" data-i18n="config.partitions">Partitions</span>
+                                <span class="partition-display" id="partitionDisplay">-</span>
+                                <svg class="chevron" viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                                </svg>
                             </button>
+                            <div id="partitionHelpIcon"></div>
                         </div>
-                        
-                        <div class="config-path" id="configPath"></div>
                     </div>
+                    <div class="card-actions">
+                        <button class="btn-filled" id="saveConfig">
+                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                <path fill="currentColor" d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
+                            </svg>
+                            <span data-i18n="btn.save">Save</span>
+                        </button>
+                    </div>
+                    <div class="config-path" id="configPath"></div>
                 </div>
+            </div>
 
-                <!-- Modules Tab -->
-                <div class="tab-panel" id="modulesPanel">
-                    <div class="md3-card">
-                        <div class="card-header">
-                            <h2 class="card-title" data-i18n="modules.title">Modules</h2>
+            <!-- Modules Tab -->
+            <div class="tab-panel" id="modulesPanel">
+                <div class="md3_card">
+                    <div class="card-header">
+                        <h2 class="card-title" data-i18n="modules.title">Modules</h2>
+                        <div class="module-header-actions">
+                            <button class="show-hidden-btn" id="showHiddenBtn">
+                                <svg viewBox="0 0 24 24" width="20" height="20">
+                                    <path fill="currentColor" d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>
+                                </svg>
+                                <span data-i18n="modules.showHidden">Show Hidden</span>
+                            </button>
                             <button class="icon-btn" id="reloadModules">
                                 <svg viewBox="0 0 24 24" width="24" height="24">
                                     <path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
                                 </svg>
                             </button>
                         </div>
-                        <div class="module-path" id="modulePath"></div>
                     </div>
+                    <div class="module-path" id="modulePath"></div>
                     
                     <div class="module-list" id="moduleList">
-                        <div class="modules-loading" id="modulesLoading" style="display: flex;">
+                        <div class="module-loading" id="modulesLoading">
                             <div class="spinner"></div>
                             <span data-i18n="modules.loading">Loading modules...</span>
                         </div>
-                        <div class="modules-empty" id="modulesEmpty" style="display: none;">
+                        <div class="module-empty" id="modulesEmpty" style="display:none;">
                             <svg viewBox="0 0 24 24" width="48" height="48">
-                                <path fill="currentColor" d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-2.06 11L14 17v-2h-4v-2h4V9l4.94 4.06z"/>
+                                <path fill="currentColor" d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-1 12H5c-.55 0-1-.45-1-1V9c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v8c0 .55-.45 1-1 1z"/>
                             </svg>
                             <span data-i18n="modules.empty">No modules found</span>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Logs Tab -->
-                <div class="tab-panel" id="logsPanel">
-                    <div class="md3-card">
-                        <div class="card-header">
-                            <h2 class="card-title" data-i18n="logs.title">Logs</h2>
-                            <button class="icon-btn" id="refreshLogs">
-                                <svg viewBox="0 0 24 24" width="24" height="24">
-                                    <path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                                </svg>
-                            </button>
+            <!-- About Tab - Changed from Logs -->
+            <div class="tab-panel" id="aboutPanel">
+                <div class="md3_card about-card">
+                    <!-- Project Info -->
+                    <div class="about-section">
+                        <div class="about-section-title">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                            <span data-i18n="about.projectInfo">Project Info</span>
                         </div>
-                        
-                        <div class="log-tabs">
-                            <button class="log-tab active" data-log="current" data-i18n="logs.current">Current</button>
-                            <button class="log-tab" data-log="old" data-i18n="logs.old">Old</button>
+                        <div style="text-align:center;padding:16px 0;">
+                            <div style="font-size:20px;font-weight:600;margin-bottom:4px;">Magic Mount Metaverse</div>
+                            <div style="font-size:14px;color:var(--md3-on-surface-variant);margin-bottom:8px;">v3.4.1</div>
+                            <div style="font-size:12px;color:var(--md3-on-surface-variant);">Enhanced Metamodule Framework</div>
+                            <div style="font-size:12px;color:var(--md3-on-surface-variant);margin-top:4px;">Author: GitHub@FHYUYO</div>
                         </div>
                     </div>
                     
-                    <div class="log-view" id="logView">
-                        <pre class="log-content" id="logContent">Loading...</pre>
+                    <!-- Links -->
+                    <div class="about-section">
+                        <div class="about-section-title">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+                            <span data-i18n="about.links">Links</span>
+                        </div>
+                        <a class="about-link" id="projectLink" href="https://github.com/FHYUYO/MagicMount-Metaverse" target="_blank">
+                            <div class="about-link-icon">
+                                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                            </div>
+                            <div class="about-link-content">
+                                <div class="about-link-title" data-i18n="about.projectAddr">GitHub Project</div>
+                                <div class="about-link-desc">MagicMount-Metaverse</div>
+                            </div>
+                            <div class="about-link-arrow">→</div>
+                        </a>
+                        <a class="about-link" id="qqGroupLink" href="https://qun.qq.com/universal-share/share?ac=1&authKey=8CMcZK1kODSeL1cXQyg%2BP3IgIDnSGnaubijWTQPzdhu9cXs09cin8fxs9qysuOlR&busi_data=eyJncm91cENvZGUiOiIzMzM2MDYyNDQiLCJ0b2tlbiI6ImhBdWswVVVFVU9tU3hPSFEzWlUzQytlcFF4ck5Wd2UwWFFPK0VjWnc1b3lMMGhaV1VHcXM4dFZOaUVSdTB0NjYiLCJ1aW4iOiIzMDU5NTE2MzMxIn0%3D&data=kKYKFoCMWKfBoCEWKsl5mL7bYi09dj-7E9OpndawVOAzY5NmMPd6sFO2xRPiTR40pwwzOSBf8o2ae_gNgC4dVw&svctype=4&tempid=h5_group_info" target="_blank">
+                            <div class="about-link-icon" style="background:#07c160;">
+                                <svg viewBox="0 0 24 24" width="20" height="20"><path fill="white" d="M9.5 13q-.825 0-1.412-.588T7.5 11q0-.825.588-1.413T9.5 9q.825 0 1.413.587T11.5 11q0 .825-.587 1.412T9.5 13Zm5 0q-.825 0-1.412-.588T12.5 11q0-.825.588-1.413T14.5 9q.825 0 1.413.587T16.5 11q0 .825-.587 1.412T14.5 13ZM12 2C6.477 2 2 6.477 2 12q0 2.05.613 3.9.088.263.362.463l.425.275q.413.25.875.038.225-.1.25-.338L4.7 14.9q.138-.363.363-.663.088-.112.212-.188-.175-.263-.288-.55-.113-.288-.188-.588-.138-.463-.188-.975-.05-.513-.063-1.063-.038-.963.263-1.85Q5 7.55 6 7.025q.375-.2.813-.325.1-.013.187-.025.513-.075 1.038-.075h.963q.525 0 1.038.075.088.013.188.025.438.125.812.325 1 .525 1.575 1.312.55.75.75 1.675.075.35.113.688.025.3.038.625.013.213.013.413.05.513-.063 1.063-.05.512-.187.975-.075.3-.188.588-.113.287-.288.55.125.075.213.188.225.3.362.663l.15 1.438q.025.238.25.338.463.213.875-.038l.425-.275q.275-.2.363-.463.613-1.85.613-3.9 0-5.523-4.477-10Z"/></svg>
+                            </div>
+                            <div class="about-link-content">
+                                <div class="about-link-title" data-i18n="about.qqGroup">QQ Group</div>
+                                <div class="about-link-desc">333606244</div>
+                            </div>
+                            <div class="about-link-arrow">→</div>
+                        </a>
+                    </div>
+                    
+                    <!-- Tutorial -->
+                    <div class="about-section">
+                        <div class="about-section-title">
+                            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+                            <span data-i18n="about.tutorial">Usage Tutorial</span>
+                        </div>
+                        <ul class="tutorial-list">
+                            <li class="tutorial-item">
+                                <div class="tutorial-number">1</div>
+                                <div class="tutorial-content">
+                                    <div class="tutorial-title" data-i18n="about.tut1.title">Config Tab</div>
+                                    <div class="tutorial-desc" data-i18n="about.tut1.desc">Select partitions to mount and configure mount source</div>
+                                </div>
+                            </li>
+                            <li class="tutorial-item">
+                                <div class="tutorial-number">2</div>
+                                <div class="tutorial-content">
+                                    <div class="tutorial-title" data-i18n="about.tut2.title">Modules Tab</div>
+                                    <div class="tutorial-desc" data-i18n="about.tut2.desc">Set mount mode for each module, force mount or ignore specific modules</div>
+                                </div>
+                            </li>
+                            <li class="tutorial-item">
+                                <div class="tutorial-number">3</div>
+                                <div class="tutorial-content">
+                                    <div class="tutorial-title" data-i18n="about.tut3.title">Settings Tab</div>
+                                    <div class="tutorial-desc" data-i18n="about.tut3.desc">Enable stealth mode and performance optimization</div>
+                                </div>
+                            </li>
+                            <li class="tutorial-item">
+                                <div class="tutorial-number">4</div>
+                                <div class="tutorial-content">
+                                    <div class="tutorial-title" data-i18n="about.tut4.title">Reboot</div>
+                                    <div class="tutorial-desc" data-i18n="about.tut4.desc">Reboot device to apply changes</div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Donate -->
+                    <div class="about-section">
+                        <div class="donate-title" data-i18n="about.donate">☕ Support Development</div>
+                        <div style="text-align:center;">
+                            <img class="donate-qrcode" id="donateQrcode" src="../mm_reward_qrcode.png" alt="Donate QR Code" onerror="this.style.display='none'">
+                            <div style="font-size:12px;color:var(--md3-on-surface-variant);margin-top:8px;" data-i18n="about.donateHint">Scan QR code to donate</div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Settings Tab -->
-                <div class="tab-panel" id="settingsPanel">
-                    <div class="md3-card">
-                        <h2 class="card-title" data-i18n="settings.stealthSettings">Stealth Settings</h2>
-                        
-                        <h3 class="section-title" data-i18n="settings.general">General</h3>
-                        
-                        <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="settings.enable">Enable Stealth Mode</span>
-                            <label class="switch">
-                                <input type="checkbox" id="stealthMode">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        
-                        <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="settings.randomId">Randomize Module ID</span>
-                            <label class="switch">
-                                <input type="checkbox" id="randomizeId">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        
-                        <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="settings.hideLogs">Hide Mount Logs</span>
-                            <label class="switch">
-                                <input type="checkbox" id="hideMountLogs">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        
-                        <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="settings.hideFromList">Hide from Module List</span>
-                            <label class="switch">
-                                <input type="checkbox" id="hideFromList">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        
-                        <h3 class="section-title" data-i18n="settings.mountMode">Mount Mode</h3>
-                        
-                        <div class="text-field">
-                            <select id="globalMountMode">
-                                <option value="magic" data-i18n="settings.magicMode">Magic</option>
-                                <option value="overlayfs" data-i18n="settings.overlayfsMode">OverlayFS</option>
-                            </select>
-                            <label data-i18n="settings.mountModeGlobal">Global Mount Mode</label>
-                        </div>
-                        
-                        <p class="mode-hint">
-                            <svg viewBox="0 0 24 24" width="16" height="16">
-                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+            <!-- Settings Tab -->
+            <div class="tab-panel" id="settingsPanel">
+                <div class="md3_card">
+                    <h2 class="card-title" data-i18n="settings.title">Settings</h2>
+                    
+                    <!-- Stealth Settings -->
+                    <h3 class="section-title" data-i18n="settings.stealthSettings">Stealth Settings</h3>
+                    
+                    <div class="toggle-field">
+                        <span class="toggle-label" data-i18n="settings.enable">Enable Stealth Mode</span>
+                        <label class="switch">
+                            <input type="checkbox" id="stealthMode">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="toggle-field">
+                        <span class="toggle-label" data-i18n="settings.randomId">Randomize Module ID</span>
+                        <label class="switch">
+                            <input type="checkbox" id="randomizeId">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="toggle-field">
+                        <span class="toggle-label" data-i18n="settings.hideLogs">Hide Mount Logs</span>
+                        <label class="switch">
+                            <input type="checkbox" id="hideMountLogs">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="toggle-field">
+                        <span class="toggle-label" data-i18n="settings.hideFromList">Hide from Module List</span>
+                        <label class="switch">
+                            <input type="checkbox" id="hideFromList">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <hr class="divider">
+                    
+                    <!-- Mount Mode Settings -->
+                    <h3 class="section-title" data-i18n="settings.mountMode">Mount Mode</h3>
+                    
+                    <div class="text-field">
+                        <select id="globalMountMode">
+                            <option value="magic" data-i18n="settings.magicMode">Magic</option>
+                            <option value="overlayfs" data-i18n="settings.overlayfsMode">OverlayFS</option>
+                        </select>
+                        <label data-i18n="settings.mountModeGlobal">Global Mount Mode</label>
+                    </div>
+                    
+                    <hr class="divider">
+                    
+                    <!-- Performance Settings -->
+                    <h3 class="section-title" data-i18n="settings.performance">Performance</h3>
+                    
+                    <div class="text-field">
+                        <select id="optLevel">
+                            <option value="0" data-i18n="settings.optOff">Disabled</option>
+                            <option value="1" data-i18n="settings.optFast">Fast</option>
+                            <option value="2" data-i18n="settings.optUltra">Ultra</option>
+                        </select>
+                        <label data-i18n="settings.optLevel">Optimization Level</label>
+                    </div>
+                    
+                    <div class="text-field">
+                        <input type="number" id="mountDelay" min="0" max="10000" step="100" placeholder=" ">
+                        <label data-i18n="settings.mountDelay">Mount Delay (ms)</label>
+                    </div>
+                    
+                    <div class="toggle-field">
+                        <span class="toggle-label" data-i18n="settings.parallelMount">Parallel Mounting</span>
+                        <label class="switch">
+                            <input type="checkbox" id="parallelMount">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="card-actions">
+                        <button class="btn-filled" id="saveStealth">
+                            <svg viewBox="0 0 24 24" width="20" height="20">
+                                <path fill="currentColor" d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
                             </svg>
-                            <span>Magic: Standard single directory mount. OverlayFS: Dual directory for better isolation.</span>
-                        </p>
-                        
-                        <h3 class="section-title" data-i18n="settings.performance">Performance</h3>
-                        
-                        <div class="text-field">
-                            <select id="optLevel">
-                                <option value="0" data-i18n="settings.optOff">Disabled</option>
-                                <option value="1" data-i18n="settings.optFast">Fast</option>
-                                <option value="2" data-i18n="settings.optUltra">Ultra</option>
-                            </select>
-                            <label data-i18n="settings.optLevel">Optimization Level</label>
-                        </div>
-                        
-                        <div class="text-field">
-                            <input type="number" id="mountDelay" placeholder=" " min="0" max="10000">
-                            <label data-i18n="settings.mountDelay">Mount Delay (ms)</label>
-                        </div>
-                        
-                        <div class="toggle-field">
-                            <span class="toggle-label" data-i18n="settings.parallelMount">Parallel Mounting</span>
-                            <label class="switch">
-                                <input type="checkbox" id="parallelMount">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                        
-                        <div class="card-actions">
-                            <button class="btn-filled" id="saveStealth">
-                                <svg viewBox="0 0 24 24" width="20" height="20">
-                                    <path fill="currentColor" d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
-                                </svg>
-                                <span data-i18n="btn.save">Save</span>
-                            </button>
-                        </div>
+                            <span data-i18n="btn.save">Save</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </main>
 
-        <!-- Bottom Navigation -->
+        <!-- Navigation -->
         <nav class="bottom-nav">
             <button class="nav-tab active" data-tab="config">
-                <div class="icon-container">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="currentColor" d="M19.14 12.94c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.09-.16-.26-.25-.44-.25-.06 0-.12.01-.17.03l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.06-.02-.12-.03-.18-.03-.17 0-.34.09-.43.25l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.09.16.26.25.44.25.06 0 .12-.01.17-.03l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.06.02.12.03.18.03.17 0 .34-.09.43-.25l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-                    </svg>
-                </div>
-                <span class="label" data-i18n="tabs.config">Config</span>
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                </svg>
+                <span data-i18n="tabs.config">Config</span>
             </button>
             <button class="nav-tab" data-tab="modules">
-                <div class="icon-container">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="currentColor" d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/>
-                    </svg>
-                </div>
-                <span class="label" data-i18n="tabs.modules">Modules</span>
-            </button>
-            <button class="nav-tab" data-tab="logs">
-                <div class="icon-container">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
-                    </svg>
-                </div>
-                <span class="label" data-i18n="tabs.logs">Logs</span>
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="currentColor" d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/>
+                </svg>
+                <span data-i18n="tabs.modules">Modules</span>
             </button>
             <button class="nav-tab" data-tab="settings">
-                <div class="icon-container">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                    </svg>
-                </div>
-                <span class="label" data-i18n="tabs.settings">Settings</span>
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="currentColor" d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                </svg>
+                <span data-i18n="tabs.settings">Settings</span>
+            </button>
+            <button class="nav-tab" data-tab="about">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                </svg>
+                <span data-i18n="tabs.about">About</span>
             </button>
         </nav>
     </div>
-
+    
     <script src="./assets/md3.js"></script>
 </body>
 </html>
