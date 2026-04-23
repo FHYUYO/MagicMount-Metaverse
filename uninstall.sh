@@ -27,7 +27,7 @@ done
 
 # 清理配置文件（可选）
 # 取消注释以下行以清除用户数据
-# rm -rf /data/adb/magic_mount
+# rm -rf /data/adb/Metaverse
 
 # 清理链接
 if [ -L "/data/adb/metamodule" ]; then

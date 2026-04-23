@@ -1,20 +1,29 @@
 #!/system/bin/sh
 ############################################
-# Dynamic Status Updater v3.0
+# Dynamic Status Updater v3.4.2
 # Updates module.prop description in KSU list
-# Fixed: Enhanced per-module mount mode parsing
+# Fixed: Log path unified to /data/adb/Metaverse/运行日志.log
+# Enhanced: Chinese labels
 ############################################
 
 MODDIR="${0%/*}"
 MODULE_PROP="$MODDIR/module.prop"
-CONFIG_DIR="/data/adb/magic_mount"
-EXTENDED_CONFIG="$CONFIG_DIR/mm_extended.conf"
-LOG_FILE="$CONFIG_DIR/mm.log"
+CONFIG_DIR="/data/adb/Metaverse"
+EXTENDED_CONFIG="/data/adb/Metaverse/扩展配置.conf"
+LOG_FILE="/data/adb/Metaverse/运行日志.log"
 
 # 默认值
 GLOBAL_MODE="magic"
 MODULE_MODES_JSON="{}"
+FORCE_MOUNT_JSON="{}"
+IGNORED_MODULES_JSON="{}"
 
+# 日志函数
+log_msg() {
+    local msg="$1"
+    local level="${2:-"信息"}"
+    echo "[$level] $(date '+%m-%d %H:%M:%S') $msg" >> "$LOG_FILE" 2>/dev/null
+}
 
 # 检查模块是否包含可挂载的分区
 is_module_mountable() {
@@ -24,15 +33,34 @@ is_module_mountable() {
     done
     return 1
 }
+
 # 读取全局配置
 read_global_config() {
     if [ -f "$EXTENDED_CONFIG" ]; then
         GLOBAL_MODE=$(grep -E "^[[:space:]]*mount_mode[[:space:]]*=" "$EXTENDED_CONFIG" 2>/dev/null | head -1 | sed 's/.*=[[:space:]]*//' | tr -d ' "\r\n')
         MODULE_MODES_JSON=$(grep -E "^[[:space:]]*module_mount_modes[[:space:]]*=" "$EXTENDED_CONFIG" 2>/dev/null | head -1 | sed 's/.*=[[:space:]]*//')
+        FORCE_MOUNT_JSON=$(grep -E "^[[:space:]]*force_mount_modules[[:space:]]*=" "$EXTENDED_CONFIG" 2>/dev/null | head -1 | sed 's/.*=[[:space:]]*//')
+        IGNORED_MODULES_JSON=$(grep -E "^[[:space:]]*ignored_modules[[:space:]]*=" "$EXTENDED_CONFIG" 2>/dev/null | head -1 | sed 's/.*=[[:space:]]*//')
     fi
     
     [ -z "$GLOBAL_MODE" ] && GLOBAL_MODE="magic"
     [ -z "$MODULE_MODES_JSON" ] && MODULE_MODES_JSON="{}"
+    [ -z "$FORCE_MOUNT_JSON" ] && FORCE_MOUNT_JSON="{}"
+    [ -z "$IGNORED_MODULES_JSON" ] && IGNORED_MODULES_JSON="{}"
+}
+
+# 检查模块是否被强制挂载
+is_force_mount() {
+    local module_name="$1"
+    echo "$FORCE_MOUNT_JSON" | grep -o "\"$module_name\":true" >/dev/null 2>&1
+    return $?
+}
+
+# 检查模块是否被自定义忽略
+is_custom_ignored() {
+    local module_name="$1"
+    echo "$IGNORED_MODULES_JSON" | grep -o "\"$module_name\":\"ignore\"" >/dev/null 2>&1
+    return $?
 }
 
 # 获取模块挂载模式
@@ -40,14 +68,12 @@ get_module_mode() {
     local module_name="$1"
     local mode=""
     
-    # 从JSON中提取模块模式
     mode=$(echo "$MODULE_MODES_JSON" | grep -o "\"$module_name\":\"[^\"]*\"" 2>/dev/null | head -1)
     if [ -n "$mode" ]; then
         echo "$mode" | sed 's/.*":"//' | tr -d '"'
         return
     fi
     
-    # 默认使用全局模式
     echo "global"
 }
 
@@ -55,12 +81,12 @@ get_module_mode() {
 count_modules() {
     local magic=0
     local overlayfs=0
+    local skipped=0
     
     read_global_config
     
     local MODULE_DIR="/data/adb/modules"
     
-    # 统计
     for mod in "$MODULE_DIR"/*; do
         # 基本检查
         [ -d "$mod" ] || continue
@@ -68,10 +94,36 @@ count_modules() {
         
         local name=$(basename "$mod")
         
-        # 跳过自身和禁用的模块
+        # 跳过自身模块
         [ "$name" = "Magic-Mount-Metaverse" ] && continue
-        [ -e "$mod/disable" ] || [ -e "$mod/remove" ] && continue
-        [ -e "$mod/skip_mount" ] && continue
+        
+        # 检查是否被KSU禁用
+        if [ -e "$mod/disable" ] || [ -e "$mod/remove" ]; then
+            continue
+        fi
+        
+        # 检查是否被自定义忽略
+        if is_custom_ignored "$name"; then
+            continue
+        fi
+        
+        # 检查是否有skip_mount标记 - 这些模块不应显示为已挂载
+        if [ -e "$mod/skip_mount" ]; then
+            # 但force_mount可以覆盖
+            if ! is_force_mount "$name"; then
+                skipped=$((skipped + 1))
+                continue
+            fi
+        fi
+        
+        # 检查是否有原生ignore标记
+        if [ -e "$mod/ignore" ]; then
+            # 但force_mount可以覆盖
+            if ! is_force_mount "$name"; then
+                skipped=$((skipped + 1))
+                continue
+            fi
+        fi
         
         # 获取模块挂载模式
         local mode=$(get_module_mode "$name")
@@ -91,7 +143,7 @@ count_modules() {
         esac
     done
     
-    echo "$magic|$overlayfs"
+    echo "$magic|$overlayfs|$skipped"
 }
 
 # 获取状态
@@ -145,7 +197,11 @@ get_module_list() {
         local name=$(basename "$mod")
         [ "$name" = "Magic-Mount-Metaverse" ] && continue
         [ -e "$mod/disable" ] || [ -e "$mod/remove" ] && continue
-        [ -e "$mod/skip_mount" ] && continue
+        [ -e "$mod/skip_mount" ] && ! is_force_mount "$name" && continue
+        [ -e "$mod/ignore" ] && ! is_force_mount "$name" && continue
+        if is_custom_ignored "$name"; then
+            continue
+        fi
         
         local mode=$(get_module_mode "$name")
         if [ "$mode" = "global" ]; then
@@ -163,6 +219,7 @@ update_prop() {
     local stats=$(count_modules)
     local magic=$(echo "$stats" | cut -d'|' -f1)
     local overlayfs=$(echo "$stats" | cut -d'|' -f2)
+    local skipped=$(echo "$stats" | cut -d'|' -f3)
     
     # 构建描述
     local desc=""
@@ -171,12 +228,17 @@ update_prop() {
     local total=$((magic + overlayfs))
     
     if [ "$total" -eq 0 ]; then
-        desc="Magic: 0 | Overlayfs: 0 | Ready"
+        desc="Magic: 0 | OverlayFS: 0 | 状态: 就绪"
     else
-        desc="Magic:$magic | Overlayfs:$overlayfs | Ready"
+        desc="Magic:$magic | OverlayFS:$overlayfs | 状态: 运行中"
     fi
     
-    # 如果有全局模式信息
+    # 如果有跳过/忽略的模块
+    if [ "$skipped" -gt 0 ]; then
+        desc="${desc} | 跳过:$skipped"
+    fi
+    
+    # 如果全局模式不是magic
     if [ "$GLOBAL_MODE" != "magic" ]; then
         desc="${desc} [${GLOBAL_MODE^^}]"
     fi
@@ -191,14 +253,16 @@ update_prop() {
             
             # 验证更新
             if grep -q "^description=${desc}" "$MODULE_PROP"; then
+                log_msg "状态已更新: $desc" "调试"
                 return 0
             fi
             
             # 如果sed失败，使用备份方法
             if grep -v "^description=" "$MODULE_PROP" > "${tmp}" 2>/dev/null; then
-                echo "description=${desc}" >> "${tmp}"
+                echo "description=$desc" >> "${tmp}"
                 cat "${tmp}" > "$MODULE_PROP"
                 rm -f "${tmp}"
+                log_msg "状态已更新(备份方法): $desc" "调试"
             fi
         fi
     fi
@@ -206,18 +270,27 @@ update_prop() {
     return 0
 }
 
-# 备用更新方法（处理并发）
+# 备用更新方法
 update_prop_backup() {
     local stats=$(count_modules)
     local magic=$(echo "$stats" | cut -d'|' -f1)
     local overlayfs=$(echo "$stats" | cut -d'|' -f2)
+    local skipped=$(echo "$stats" | cut -d'|' -f3)
     local total=$((magic + overlayfs))
     
     local desc=""
     if [ "$total" -eq 0 ]; then
-        desc="Magic: 0 | Overlayfs: 0 | Ready"
+        desc="Magic: 0 | OverlayFS: 0 | 状态: 就绪"
     else
-        desc="Magic:$magic | Overlayfs:$overlayfs | Ready"
+        desc="Magic:$magic | OverlayFS:$overlayfs | 状态: 运行中"
+    fi
+    
+    if [ "$skipped" -gt 0 ]; then
+        desc="${desc} | 跳过:$skipped"
+    fi
+    
+    if [ "$GLOBAL_MODE" != "magic" ]; then
+        desc="${desc} [${GLOBAL_MODE^^}]"
     fi
     
     if [ -f "$MODULE_PROP" ]; then
@@ -233,13 +306,16 @@ update_prop_backup() {
         if [ -f "${MODULE_PROP}.new" ]; then
             cat "${MODULE_PROP}.new" > "$MODULE_PROP"
             rm -f "${MODULE_PROP}.new"
+            log_msg "状态已更新(备用方法): $desc" "调试"
         fi
     fi
 }
 
 # 主程序
 main() {
+    log_msg "状态更新开始" "调试"
     update_prop || update_prop_backup
+    log_msg "状态更新完成" "调试"
 }
 
 # 运行

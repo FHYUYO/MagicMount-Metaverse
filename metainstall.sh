@@ -1,20 +1,22 @@
 #!/system/bin/sh
 ############################################
 # Magic Mount Metaverse - metainstall.sh
-# Post-installation script v2.3
+# Post-installation script v3.4.2
 # Author: GitHub@FHYUYO
+# v3.4.2: Log path unified to /data/adb/Metaverse/运行日志.log
 ############################################
 
-MODULE_DATA_DIR="/data/adb/magic_mount"
-EXTENDED_CONFIG="$MODULE_DATA_DIR/mm_extended.conf"
+MODULE_DATA_DIR="/data/adb/Metaverse"
+EXTENDED_CONFIG="$MODULE_DATA_DIR/扩展配置.conf"
+LOG_FILE="/data/adb/Metaverse/运行日志.log"
 
 # 日志函数
 log() {
     local msg="[MetaInstall] $1"
-    echo "$msg" >> /data/adb/magic_mount/mm.log 2>/dev/null
+    echo "$msg" >> "$LOG_FILE" 2>/dev/null
 }
 
-log "Magic Mount Metaverse v2.3 post-install started"
+log "Magic Mount Metaverse v3.4.2 post-install started"
 
 # 确保数据目录存在
 if [ ! -d "$MODULE_DATA_DIR" ]; then
@@ -31,7 +33,7 @@ if [ ! -f "$EXTENDED_CONFIG" ]; then
     cat > "$EXTENDED_CONFIG" << 'EOF'
 # ===== Magic Mount Metaverse Extended Config =====
 # Author: GitHub@FHYUYO/酷安@枫原羽悠
-# Version: v2.3
+# Version: v3.4.2
 # This file contains extended settings for shell scripts only.
 # These settings are NOT parsed by mmd binary.
 
@@ -59,7 +61,7 @@ modules_img_size=2048
 
 # ====== Auto Backup ======
 auto_backup=true
-backup_dir=/data/adb/magic_mount/backup
+backup_dir=/data/adb/Metaverse/backup
 EOF
     chmod 600 "$EXTENDED_CONFIG"
     log "Extended config initialized"
@@ -76,7 +78,7 @@ if [ ! -f "$MODDIR/mm_overlay" ]; then
 fi
 
 # 创建备份目录
-BACKUP_DIR="/data/adb/magic_mount/backup"
+BACKUP_DIR="/data/adb/Metaverse/backup"
 if [ ! -d "$BACKUP_DIR" ]; then
     mkdir -p "$BACKUP_DIR"
     chmod 700 "$BACKUP_DIR"

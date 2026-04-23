@@ -7,8 +7,8 @@
 
 MODDIR="${0%/*}"
 STATUS_UPDATER="$MODDIR/status_updater.sh"
-CONFIG_DIR="/data/adb/magic_mount"
-EXTENDED_CONFIG="$CONFIG_DIR/mm_extended.conf"
+CONFIG_DIR="/data/adb/Metaverse"
+EXTENDED_CONFIG="$CONFIG_DIR/扩展配置.conf"
 
 # 读取优化级别
 OPT_LEVEL="0"

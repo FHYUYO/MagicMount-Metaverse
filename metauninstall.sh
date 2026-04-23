@@ -1,18 +1,21 @@
 #!/system/bin/sh
 ############################################
 # Magic Mount Metaverse - metauninstall.sh
-# Pre-uninstallation cleanup v2.3
+# Pre-uninstallation cleanup v3.4.2
 # Author: GitHub@FHYUYO
+# v3.4.2: Log path unified to /data/adb/Metaverse/运行日志.log
 ############################################
 
-MODULE_DATA_DIR="/data/adb/magic_mount"
+MODULE_DATA_DIR="/data/adb/Metaverse"
 METAMODULE_LINK="/data/adb/metamodule"
 MODULE_ID="Magic-Mount-Metaverse"
+LOG_FILE="/data/adb/Metaverse/运行日志.log"
+OLD_LOG_FILE="$MODULE_DATA_DIR/运行日志.log"
 
 # 日志函数
 log() {
     local msg="[MetaUninstall] $1"
-    echo "$msg" >> "$MODULE_DATA_DIR/mm.log" 2>/dev/null
+    echo "$msg" >> "$LOG_FILE" 2>/dev/null
 }
 
 log "Cleanup started for Magic Mount Metaverse"
@@ -52,9 +55,10 @@ if [ -f "$MODDIR/modules.img" ]; then
     log "modules.img unmounted"
 fi
 
-# 清理临时文件
-rm -f "$MODULE_DATA_DIR/mm.log" 2>/dev/null
-rm -f "$MODULE_DATA_DIR/mm.log.old" 2>/dev/null
+# 清理临时文件（同时清理新旧日志文件路径）
+rm -f "$LOG_FILE" 2>/dev/null
+rm -f "$OLD_LOG_FILE" 2>/dev/null
+rm -f "$OLD_LOG_FILE.old" 2>/dev/null
 
 log "Cleanup complete"
 exit 0

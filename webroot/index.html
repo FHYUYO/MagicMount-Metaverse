@@ -244,6 +244,101 @@
             border-color: var(--md3-tertiary, #7d5260);
         }
         
+        /* v3.5 log panel styles */
+        #autoRefreshLogBtn.active {
+            background: var(--md3-primary-container, #eaddff);
+            border-color: var(--md3-primary, #6750a4);
+            color: var(--md3-on-primary-container, #21005d);
+        }
+        
+        /* v3.5.1 log page enhancements */
+        .log-section {
+            margin-bottom: 16px;
+        }
+        .log-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--md3-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .global-settings-display {
+            background: var(--md3-surface-container-high);
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+        .global-settings-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+        }
+        .global-settings-row:not(:last-child) {
+            border-bottom: 1px solid var(--md3-outline-variant);
+        }
+        .global-settings-label {
+            font-size: 13px;
+            color: var(--md3-on-surface-variant);
+        }
+        .global-settings-value {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--md3-on-surface);
+        }
+        .log-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .log-stats-item {
+            background: var(--md3-surface-container);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+        }
+        .log-stats-label {
+            font-size: 11px;
+            color: var(--md3-on-surface-variant);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .log-stats-value {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .log-stats-value.mounted {
+            color: var(--md3-primary);
+        }
+        .log-stats-value.unmounted {
+            color: var(--md3-on-surface-variant);
+        }
+        .log-stats-value.ignored {
+            color: var(--md3-error);
+        }
+        .log-stats-value.skipped {
+            color: #FF9800;
+        }
+        .clear-log-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            border: 1px solid var(--md3-outline, #79747e);
+            background: transparent;
+            color: var(--md3-error, #b3261e);
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .clear-log-btn:hover {
+            background: var(--md3-error-container, #f9dedc);
+            border-color: var(--md3-error, #b3261e);
+        }
+        
         /* Hidden module card style */
         .module-card.hidden-type {
             opacity: 0.7;
@@ -602,7 +697,83 @@
                 </div>
             </div>
 
-            <!-- About Tab - Changed from Logs -->
+            <!-- Logs Tab v3.5.1 -->
+            <div class="tab-panel" id="logsPanel">
+                <div class="md3_card">
+                    <div class="card-header">
+                        <h2 class="card-title">运行日志</h2>
+                        <div style="display:flex;gap:8px;">
+                            <button id="autoRefreshLogBtn" class="md3-btn-secondary" onclick="toggle_log_refresh()">自动刷新</button>
+                            <button class="md3-btn-secondary" onclick="load_logs()">刷新</button>
+                            <button class="clear-log-btn" onclick="clearLogFile()">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                                <span data-i18n="logs.clearLog">清空日志</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Global Settings Display v3.5.1 -->
+                    <div class="log-section">
+                        <div class="log-section-title">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                            </svg>
+                            <span data-i18n="logs.globalSettings">全局设置</span>
+                        </div>
+                        <div class="global-settings-display" id="globalSettingsDisplay">
+                            <div class="global-settings-row">
+                                <span class="global-settings-label">-</span>
+                                <span class="global-settings-value">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Statistics Display v3.5.1 -->
+                    <div class="log-section">
+                        <div class="log-section-title">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                            </svg>
+                            <span data-i18n="logs.stats">统计信息</span>
+                        </div>
+                        <div id="logStatsContainer">
+                            <div class="log-stats-grid">
+                                <div class="log-stats-item">
+                                    <div class="log-stats-label" data-i18n="logs.mountedCount">已挂载</div>
+                                    <div class="log-stats-value mounted">-</div>
+                                </div>
+                                <div class="log-stats-item">
+                                    <div class="log-stats-label" data-i18n="logs.unmountedCount">未挂载</div>
+                                    <div class="log-stats-value unmounted">-</div>
+                                </div>
+                                <div class="log-stats-item">
+                                    <div class="log-stats-label" data-i18n="logs.ignoredCount">已忽略</div>
+                                    <div class="log-stats-value ignored">-</div>
+                                </div>
+                                <div class="log-stats-item">
+                                    <div class="log-stats-label" data-i18n="logs.skippedCount">跳过标记</div>
+                                    <div class="log-stats-value skipped">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Log Content -->
+                    <div class="log-section">
+                        <div class="log-section-title">
+                            <svg viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/>
+                            </svg>
+                            <span>日志内容</span>
+                        </div>
+                        <div id="logContent" style="background:var(--md3-surface-container-highest);padding:12px;border-radius:8px;font-family:monospace;font-size:12px;height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;color:var(--md3-on-surface-variant);">点击刷新按钮加载日志...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- About Tab -->
             <div class="tab-panel" id="aboutPanel">
                 <div class="md3_card about-card">
                     <!-- Project Info -->
@@ -613,8 +784,8 @@
                         </div>
                         <div style="text-align:center;padding:16px 0;">
                             <div style="font-size:20px;font-weight:600;margin-bottom:4px;">Magic Mount Metaverse</div>
-                            <div style="font-size:14px;color:var(--md3-on-surface-variant);margin-bottom:8px;">v3.4.1</div>
-                            <div style="font-size:12px;color:var(--md3-on-surface-variant);">Enhanced Metamodule Framework</div>
+                            <div style="font-size:14px;color:var(--md3-on-surface-variant);margin-bottom:8px;">v3.5.1</div>
+                            <div style="font-size:12px;color:var(--md3-on-surface-variant);">v3.5.1 - 关注塔菲谢谢喵</div>
                             <div style="font-size:12px;color:var(--md3-on-surface-variant);margin-top:4px;">Author: GitHub@FHYUYO</div>
                         </div>
                     </div>
@@ -801,6 +972,12 @@
                     <path fill="currentColor" d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/>
                 </svg>
                 <span data-i18n="tabs.modules">Modules</span>
+            </button>
+            <button class="nav-tab" data-tab="logs">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z"/>
+                </svg>
+                <span data-i18n="tabs.logs">Logs</span>
             </button>
             <button class="nav-tab" data-tab="settings">
                 <svg viewBox="0 0 24 24" width="24" height="24">
