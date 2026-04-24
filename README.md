@@ -75,6 +75,9 @@ optimization_level=2
 - GitHub: @FHYUYO
 - 酷安: @枫原羽悠
 
-### 致谢
+### 参考来源
 
-- MagicMount 原版开发者
+- MagicMount 原版开发者https://github.com/KernelSU-Modules-Repo/meta-mm
+-Overlayfs 原版开发者
+https://github.com/KernelSU-Modules-Repo/meta-overlayfs
+
